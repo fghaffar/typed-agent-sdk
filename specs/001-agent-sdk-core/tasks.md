@@ -25,12 +25,12 @@
 
 **Purpose**: Project initialization, packaging, and tooling
 
-- [ ] T001 Create project directory structure: `agent_sdk/`, `tests/`, `examples/`, `examples/skills/` per plan.md
-- [ ] T002 Create `pyproject.toml` with metadata (name=agent-sdk, version=0.1.0, python>=3.11), dependencies (pydantic-ai>=1.0, pydantic>=2.0, typing-extensions>=4.0, PyYAML>=6.0), optional extras ([telemetry], [dev]), and build system
-- [ ] T003 [P] Create `agent_sdk/py.typed` marker file (PEP 561)
-- [ ] T004 [P] Configure `ruff` in pyproject.toml (linting + formatting rules)
-- [ ] T005 [P] Configure `mypy` strict mode in pyproject.toml (mypy --strict settings)
-- [ ] T006 [P] Create `tests/conftest.py` with shared fixtures: FunctionModel agent fixture, sample tool fixtures, tmp_path skill directory fixture
+- [x] T001 Create project directory structure: `agent_sdk/`, `tests/`, `examples/`, `examples/skills/` per plan.md
+- [x] T002 Create `pyproject.toml` with metadata (name=agent-sdk, version=0.1.0, python>=3.11), dependencies (pydantic-ai>=1.0, pydantic>=2.0, typing-extensions>=4.0, PyYAML>=6.0), optional extras ([telemetry], [dev]), and build system
+- [x] T003 [P] Create `agent_sdk/py.typed` marker file (PEP 561)
+- [x] T004 [P] Configure `ruff` in pyproject.toml (linting + formatting rules)
+- [x] T005 [P] Configure `mypy` strict mode in pyproject.toml (mypy --strict settings)
+- [x] T006 [P] Create `tests/conftest.py` with shared fixtures: FunctionModel agent fixture, sample tool fixtures, tmp_path skill directory fixture
 - [ ] T007 Create `.github/workflows/ci.yml` for pytest + ruff + mypy (if GitHub Actions desired)
 
 ---
@@ -41,12 +41,12 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 Create `agent_sdk/types.py` with shared types: HookEvent (StrEnum with 11 values), HookEventData union type (per-event dataclasses), ToolAnnotations dataclass (read_only, destructive, open_world), SDKMetrics dataclass (hook_invocations, guardrail_checks, handoff_count, guardrail_trips, hooks_blocked)
-- [ ] T009 [P] Create `agent_sdk/errors.py` with full exception hierarchy: AgentSDKError (base), GuardrailTripwireError, GuardrailExecutionError, HookExecutionError, SkillConflictError, SkillLoadError, HandoffConfigError, HandoffDepthError, HandoffExecutionError, PermissionDeniedError, MaxTurnsExceeded, BudgetExhausted, EditNotFoundError, EditAmbiguousError, BinaryFileError, ProcessError, SessionNotFoundError, SessionPersistenceError, SessionVersionError, PatternError, PermissionCallbackError
-- [ ] T010 [P] Create `agent_sdk/_utils.py` with internal utilities: `glob_match(pattern, name) -> bool` using fnmatch, `parse_frontmatter(content) -> tuple[dict, str]` for robust YAML frontmatter extraction (handles `---` in body), `validate_path_sandbox(path, cwd) -> Path` for path traversal prevention, `truncate_output(text, max_bytes) -> str` for output capping
-- [ ] T011 [P] Create `tests/test_types.py` with tests for HookEvent enum values, HookEventData construction, SDKMetrics defaults
-- [ ] T012 [P] Create `tests/test_utils.py` with tests for glob_match (wildcards, exact, special chars), parse_frontmatter (valid, invalid YAML, `---` in body, missing frontmatter), validate_path_sandbox (valid subpath, `../` traversal, absolute path outside cwd, symlink escape), truncate_output (under limit, at limit, over limit)
-- [ ] T013 Create `agent_sdk/__init__.py` with all public exports per contracts/public-api.md (initially importing from types and errors only; other imports added as modules are created)
+- [x] T008 Create `agent_sdk/types.py` with shared types: HookEvent (StrEnum with 11 values), HookEventData union type (per-event dataclasses), ToolAnnotations dataclass (read_only, destructive, open_world), SDKMetrics dataclass (hook_invocations, guardrail_checks, handoff_count, guardrail_trips, hooks_blocked)
+- [x] T009 [P] Create `agent_sdk/errors.py` with full exception hierarchy: AgentSDKError (base), GuardrailTripwireError, GuardrailExecutionError, HookExecutionError, SkillConflictError, SkillLoadError, HandoffConfigError, HandoffDepthError, HandoffExecutionError, PermissionDeniedError, MaxTurnsExceeded, BudgetExhausted, EditNotFoundError, EditAmbiguousError, BinaryFileError, ProcessError, SessionNotFoundError, SessionPersistenceError, SessionVersionError, PatternError, PermissionCallbackError
+- [x] T010 [P] Create `agent_sdk/_utils.py` with internal utilities: `glob_match(pattern, name) -> bool` using fnmatch, `parse_frontmatter(content) -> tuple[dict, str]` for robust YAML frontmatter extraction (handles `---` in body), `validate_path_sandbox(path, cwd) -> Path` for path traversal prevention, `truncate_output(text, max_bytes) -> str` for output capping
+- [x] T011 [P] Create `tests/test_types.py` with tests for HookEvent enum values, HookEventData construction, SDKMetrics defaults
+- [x] T012 [P] Create `tests/test_utils.py` with tests for glob_match (wildcards, exact, special chars), parse_frontmatter (valid, invalid YAML, `---` in body, missing frontmatter), validate_path_sandbox (valid subpath, `../` traversal, absolute path outside cwd, symlink escape), truncate_output (under limit, at limit, over limit)
+- [x] T013 Create `agent_sdk/__init__.py` with all public exports per contracts/public-api.md (initially importing from types and errors only; other imports added as modules are created)
 
 **Checkpoint**: Foundation ready — types, errors, utilities, and test fixtures in place. User story implementation can begin.
 

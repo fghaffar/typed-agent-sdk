@@ -2,3 +2,28 @@
 .specify/
 claude-agent-sdk-python/
 pydantic-ai/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env*
+
+# Tools
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.log

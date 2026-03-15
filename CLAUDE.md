@@ -74,6 +74,7 @@ Rules are never removed, only added. Number sequentially (`LR-001`, `LR-002`, ..
 |---|------|-------------|
 | LR-001 | Gitignored directories (`.specify/`, `.claude/`) must be symlinked into worktrees before running tooling that depends on them. Worktrees only contain committed files. | speckit.analyze failed with "No such file or directory" in 002-event-layer worktree (2026-03-08) |
 | LR-002 | Always use `uv` — never `pip`, `python`, or `venv`. Use `uv run` to execute scripts, `uv add` to add deps, `uv sync` to install. | User preference established (2026-03-08) |
+| LR-003 | System Python is 3.10, not 3.11+. `StrEnum` requires a backport (`class StrEnum(str, Enum)`) for 3.10 compat. pyproject.toml should target `>=3.10`. | `from enum import StrEnum` ImportError during Phase 2 tests (2026-03-15) |
 
 
 <!-- MANUAL ADDITIONS START -->
