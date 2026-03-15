@@ -1,0 +1,241 @@
+"""Tests for agent_sdk hooks system."""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any
+from unittest.mock import AsyncMock
+
+import pytest
+
+from agent_sdk.errors import HookExecutionError
+from agent_sdk.hooks import Hook, HookMatcher, HookResult, HookToolset, _fire_hooks
+from agent_sdk.types import HookEvent, OnStartData, PreToolUseData, PostToolUseData, SDKMetrics
+
+
+class TestHookMatcher:
+    def test_none_pattern_matches_all(self) -> None:
+        m = HookMatcher(pattern=None)
+        assert m.matches('anything') is True
+
+    def test_regex_matches(self) -> None:
+        m = HookMatcher(pattern='Write|Edit')
+        assert m.matches('Write') is True
+        assert m.matches('Edit') is True
+        assert m.matches('Read') is False
+
+    def test_exact_match(self) -> None:
+        m = HookMatcher(pattern='^calculate$')
+        assert m.matches('calculate') is True
+        assert m.matches('calculate_v2') is False
+
+    def test_invalid_regex_raises(self) -> None:
+        with pytest.raises(ValueError, match='Invalid regex'):
+            HookMatcher(pattern='[invalid')
+
+
+class TestHookResult:
+    def test_defaults(self) -> None:
+        r = HookResult()
+        assert r.block is False
+        assert r.modified_args is None
+        assert r.continue_ is True
+
+    def test_block_result(self) -> None:
+        r = HookResult(block=True, stop_reason='blocked by policy')
+        assert r.block is True
+        assert r.stop_reason == 'blocked by policy'
+
+
+class TestFireHooks:
+    @pytest.mark.asyncio
+    async def test_hook_fires_for_matching_event(self) -> None:
+        called = False
+
+        async def callback(data: Any, ctx: Any) -> HookResult:
+            nonlocal called
+            called = True
+            return HookResult()
+
+        hooks = [Hook(event=HookEvent.OnStart, callback=callback)]
+        data = OnStartData(prompt='hello')
+        await _fire_hooks(hooks, HookEvent.OnStart, data, None)
+        assert called is True
+
+    @pytest.mark.asyncio
+    async def test_hook_skipped_for_non_matching_event(self) -> None:
+        called = False
+
+        async def callback(data: Any, ctx: Any) -> HookResult:
+            nonlocal called
+            called = True
+            return HookResult()
+
+        hooks = [Hook(event=HookEvent.OnStop, callback=callback)]
+        data = OnStartData(prompt='hello')
+        await _fire_hooks(hooks, HookEvent.OnStart, data, None)
+        assert called is False
+
+    @pytest.mark.asyncio
+    async def test_matcher_filters_by_target(self) -> None:
+        called_for: list[str] = []
+
+        async def callback(data: Any, ctx: Any) -> HookResult:
+            if isinstance(data, PreToolUseData):
+                called_for.append(data.tool_name)
+            return HookResult()
+
+        hooks = [
+            Hook(
+                event=HookEvent.PreToolUse,
+                callback=callback,
+                matcher=HookMatcher(pattern='Write|Edit'),
+            )
+        ]
+
+        # Should fire for Write
+        await _fire_hooks(
+            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='Write', tool_args={}),
+            None, target='Write',
+        )
+        # Should NOT fire for Read
+        await _fire_hooks(
+            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='Read', tool_args={}),
+            None, target='Read',
+        )
+
+        assert called_for == ['Write']
+
+    @pytest.mark.asyncio
+    async def test_hooks_execute_in_priority_order(self) -> None:
+        order: list[int] = []
+
+        async def make_callback(priority: int):
+            async def cb(data: Any, ctx: Any) -> HookResult:
+                order.append(priority)
+                return HookResult()
+            return cb
+
+        hooks = [
+            Hook(event=HookEvent.OnStart, callback=await make_callback(3), priority=3),
+            Hook(event=HookEvent.OnStart, callback=await make_callback(1), priority=1),
+            Hook(event=HookEvent.OnStart, callback=await make_callback(2), priority=2),
+        ]
+
+        await _fire_hooks(hooks, HookEvent.OnStart, OnStartData(prompt='test'), None)
+        assert order == [1, 2, 3]
+
+    @pytest.mark.asyncio
+    async def test_hook_blocks_returns_result(self) -> None:
+        async def blocking_hook(data: Any, ctx: Any) -> HookResult:
+            return HookResult(block=True, stop_reason='blocked')
+
+        hooks = [Hook(event=HookEvent.PreToolUse, callback=blocking_hook)]
+        result = await _fire_hooks(
+            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='test', tool_args={}),
+            None, target='test',
+        )
+        assert result is not None
+        assert result.block is True
+
+    @pytest.mark.asyncio
+    async def test_hook_modifies_args(self) -> None:
+        async def modifier(data: Any, ctx: Any) -> HookResult:
+            return HookResult(modified_args={'x': 42})
+
+        hooks = [Hook(event=HookEvent.PreToolUse, callback=modifier)]
+        result = await _fire_hooks(
+            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='test', tool_args={'x': 1}),
+            None, target='test',
+        )
+        assert result is not None
+        assert result.modified_args == {'x': 42}
+
+    @pytest.mark.asyncio
+    async def test_hook_timeout_skips(self) -> None:
+        async def slow_hook(data: Any, ctx: Any) -> HookResult:
+            await asyncio.sleep(10)
+            return HookResult()
+
+        hooks = [
+            Hook(
+                event=HookEvent.OnStart,
+                callback=slow_hook,
+                matcher=HookMatcher(timeout=0.01),
+            )
+        ]
+        # Should not raise, just skip
+        result = await _fire_hooks(hooks, HookEvent.OnStart, OnStartData(prompt='test'), None)
+        assert result is None  # Timed out hook produces no result
+
+    @pytest.mark.asyncio
+    async def test_hook_exception_raises_hook_execution_error(self) -> None:
+        async def bad_hook(data: Any, ctx: Any) -> HookResult:
+            raise RuntimeError('hook broke')
+
+        hooks = [Hook(event=HookEvent.OnStart, callback=bad_hook)]
+        with pytest.raises(HookExecutionError, match='hook broke'):
+            await _fire_hooks(hooks, HookEvent.OnStart, OnStartData(prompt='test'), None)
+
+    @pytest.mark.asyncio
+    async def test_hook_bad_return_type_raises(self) -> None:
+        async def bad_return(data: Any, ctx: Any) -> Any:
+            return 'not a HookResult'
+
+        hooks = [Hook(event=HookEvent.OnStart, callback=bad_return)]
+        with pytest.raises(TypeError, match='must return HookResult'):
+            await _fire_hooks(hooks, HookEvent.OnStart, OnStartData(prompt='test'), None)
+
+    @pytest.mark.asyncio
+    async def test_empty_dict_return_accepted(self) -> None:
+        async def empty_return(data: Any, ctx: Any) -> Any:
+            return {}
+
+        hooks = [Hook(event=HookEvent.OnStart, callback=empty_return)]
+        # Should not raise
+        result = await _fire_hooks(hooks, HookEvent.OnStart, OnStartData(prompt='test'), None)
+        assert result is not None
+        assert result.block is False
+
+    @pytest.mark.asyncio
+    async def test_metrics_tracked(self) -> None:
+        async def hook(data: Any, ctx: Any) -> HookResult:
+            return HookResult()
+
+        metrics = SDKMetrics()
+        hooks = [Hook(event=HookEvent.OnStart, callback=hook)]
+        await _fire_hooks(
+            hooks, HookEvent.OnStart, OnStartData(prompt='test'), None, metrics=metrics
+        )
+        assert metrics.hook_invocations == 1
+
+    @pytest.mark.asyncio
+    async def test_block_increments_hooks_blocked(self) -> None:
+        async def blocker(data: Any, ctx: Any) -> HookResult:
+            return HookResult(block=True)
+
+        metrics = SDKMetrics()
+        hooks = [Hook(event=HookEvent.PreToolUse, callback=blocker)]
+        await _fire_hooks(
+            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='t', tool_args={}),
+            None, target='t', metrics=metrics,
+        )
+        assert metrics.hooks_blocked == 1
+
+    @pytest.mark.asyncio
+    async def test_fire_and_forget_does_not_block(self) -> None:
+        executed = asyncio.Event()
+
+        async def slow_hook(data: Any, ctx: Any) -> HookResult:
+            await asyncio.sleep(0.1)
+            executed.set()
+            return HookResult()
+
+        hooks = [
+            Hook(event=HookEvent.OnStart, callback=slow_hook, fire_and_forget=True)
+        ]
+        # Should return immediately
+        await _fire_hooks(hooks, HookEvent.OnStart, OnStartData(prompt='test'), None)
+        # Give background task time to complete
+        await asyncio.sleep(0.2)
+        assert executed.is_set()

@@ -29,6 +29,18 @@ from agent_sdk.errors import (
     SkillConflictError,
     SkillLoadError,
 )
+from agent_sdk.hooks import (
+    Hook,
+    HookMatcher,
+    HookResult,
+    HookToolset,
+    on_error,
+    on_post_tool_use,
+    on_pre_tool_use,
+    on_start,
+    on_stop,
+)
+from agent_sdk.runner import Runner, RunResult
 from agent_sdk.types import (
     HookEvent,
     HookEventData,
@@ -37,9 +49,22 @@ from agent_sdk.types import (
 )
 
 __all__ = [
-    # Types
+    # Runner
+    'Runner',
+    'RunResult',
+    # Hooks
+    'Hook',
     'HookEvent',
     'HookEventData',
+    'HookMatcher',
+    'HookResult',
+    'HookToolset',
+    'on_error',
+    'on_post_tool_use',
+    'on_pre_tool_use',
+    'on_start',
+    'on_stop',
+    # Types
     'SDKMetrics',
     'ToolAnnotations',
     # Errors
