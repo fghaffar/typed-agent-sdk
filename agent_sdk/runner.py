@@ -13,13 +13,12 @@ from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 
 from pydantic_ai import Agent
-from pydantic_ai._run_context import AgentDepsT
 from pydantic_ai.messages import ModelMessage
-from pydantic_ai.result import RunResult as PydanticRunResult
-from pydantic_ai.usage import Usage as RunUsage
+from pydantic_ai.usage import RunUsage
 
 from agent_sdk.errors import AgentSDKError
-from agent_sdk.hooks import Hook, HookToolset, _fire_hooks, HookResult
+from agent_sdk.guardrails import Guardrail, run_guardrails
+from agent_sdk.hooks import Hook, HookToolset, _fire_hooks
 from agent_sdk.types import HookEvent, OnErrorData, OnStartData, OnStopData, SDKMetrics
 
 logger = logging.getLogger('agent_sdk.runner')
@@ -45,25 +44,21 @@ class Runner(Generic[DepsT, OutputT]):
 
     Wraps a Pydantic AI Agent with hooks, guardrails, permissions,
     skills, handoffs, and session management.
-
-    Usage:
-        agent = Agent('openai:gpt-4o')
-        runner = Runner(agent, hooks=[my_hook])
-        result = runner.run_sync('Hello')
     """
 
     def __init__(
         self,
-        agent: Agent[DepsT, OutputT],
+        agent: Agent[Any, Any],
         *,
         hooks: list[Hook] | None = None,
-        # guardrails, skills, handoffs, permissions added in later phases
+        guardrails: list[Guardrail[Any]] | None = None,
         max_turns: int | None = None,
         max_budget_tokens: int | None = None,
         debug_callback: Any | None = None,
     ) -> None:
         self._agent = agent
         self._hooks = hooks or []
+        self._guardrails = guardrails or []
         self._max_turns = max_turns
         self._max_budget_tokens = max_budget_tokens
         self._debug_callback = debug_callback
@@ -78,28 +73,11 @@ class Runner(Generic[DepsT, OutputT]):
         model: Any = None,
         model_settings: Any = None,
         message_history: list[ModelMessage] | None = None,
-    ) -> RunResult[OutputT]:
-        """Run the agent with full lifecycle management.
-
-        Args:
-            prompt: User prompt string or message sequence.
-            deps: Dependencies to inject via RunContext.
-            model: Override model for this run.
-            model_settings: Override model settings.
-            message_history: Prior message history.
-
-        Returns:
-            RunResult with output, messages, usage, and SDK metrics.
-
-        Raises:
-            ValueError: If prompt is empty.
-            AgentSDKError: If Runner is already running (re-entrancy guard).
-        """
-        # Validate prompt
+    ) -> RunResult[Any]:
+        """Run the agent with full lifecycle management."""
         if isinstance(prompt, str) and not prompt.strip():
             raise ValueError('Prompt cannot be empty')
 
-        # Re-entrancy guard
         if self._running:
             raise AgentSDKError('Runner is already running. Concurrent runs are not supported.')
 
@@ -108,26 +86,23 @@ class Runner(Generic[DepsT, OutputT]):
         metrics = SDKMetrics()
 
         try:
-            # Fire OnStart hooks
+            # 1. Fire OnStart hooks
             start_data = OnStartData(
                 prompt=prompt if isinstance(prompt, str) else str(prompt),
                 agent_name=self._agent.name,
             )
             await _fire_hooks(self._hooks, HookEvent.OnStart, start_data, None, metrics=metrics)
-
             self._debug('OnStart', {'prompt': str(prompt)[:100], 'agent': self._agent.name})
 
-            # Build the toolset chain with hook interception
-            override_kwargs: dict[str, Any] = {}
-            if self._hooks:
-                hook_toolset = HookToolset(
-                    wrapped=self._agent._toolset,  # type: ignore[attr-defined]
-                    hooks=self._hooks,
-                    metrics=metrics,
+            # 2. Run INPUT guardrails (parallel, before model call)
+            if self._guardrails:
+                prompt_str = prompt if isinstance(prompt, str) else str(prompt)
+                await run_guardrails(
+                    self._guardrails, 'input', prompt_str, None, metrics=metrics
                 )
-                override_kwargs['toolsets'] = [hook_toolset]
+                self._debug('InputGuardrails', {'count': len(self._guardrails)})
 
-            # Run the agent with overrides
+            # 3. Build run kwargs and execute agent
             run_kwargs: dict[str, Any] = {}
             if deps is not None:
                 run_kwargs['deps'] = deps
@@ -138,30 +113,42 @@ class Runner(Generic[DepsT, OutputT]):
             if message_history is not None:
                 run_kwargs['message_history'] = message_history
 
-            if override_kwargs:
-                async with self._agent.override(**override_kwargs):
-                    pydantic_result = await self._agent.run(prompt, **run_kwargs)
-            else:
-                pydantic_result = await self._agent.run(prompt, **run_kwargs)
+            if self._hooks:
+                hook_toolset = HookToolset(
+                    wrapped=self._agent._toolset,  # type: ignore[attr-defined]
+                    hooks=self._hooks,
+                    metrics=metrics,
+                )
+                run_kwargs['toolsets'] = [hook_toolset]
 
-            # Build RunResult
-            result = RunResult(
-                output=pydantic_result.output,
+            pydantic_result = await self._agent.run(prompt, **run_kwargs)
+
+            output = pydantic_result.output
+
+            # 4. Run OUTPUT guardrails (parallel, after model response)
+            if self._guardrails:
+                output_str = str(output) if not isinstance(output, str) else output
+                await run_guardrails(
+                    self._guardrails, 'output', output_str, None, metrics=metrics
+                )
+                self._debug('OutputGuardrails', {'count': len(self._guardrails)})
+
+            # 5. Build RunResult
+            result: RunResult[Any] = RunResult(
+                output=output,
                 messages=list(pydantic_result.all_messages()),
                 usage=pydantic_result.usage(),
                 sdk_metrics=metrics,
             )
 
-            # Fire OnStop hooks
+            # 6. Fire OnStop hooks
             stop_data = OnStopData(result=result.output, stop_reason=None)
             await _fire_hooks(self._hooks, HookEvent.OnStop, stop_data, None, metrics=metrics)
-
             self._debug('OnStop', {'stop_reason': result.stop_reason})
 
             return result
 
         except Exception as e:
-            # Fire OnError hooks (unless the error IS from OnError to avoid infinite loop)
             if not isinstance(e, AgentSDKError) or 'OnError' not in str(e):
                 try:
                     error_data = OnErrorData(error=e, context='runner.run')
@@ -182,22 +169,13 @@ class Runner(Generic[DepsT, OutputT]):
         *,
         deps: Any = None,
         **kwargs: Any,
-    ) -> RunResult[OutputT]:
-        """Synchronous wrapper around run().
-
-        Args:
-            prompt: User prompt string.
-            deps: Dependencies to inject.
-            **kwargs: Additional arguments passed to run().
-
-        Returns:
-            RunResult with output, messages, usage, and SDK metrics.
-        """
-        import anyio
-
-        return anyio.from_thread.run(
-            lambda: self.run(prompt, deps=deps, **kwargs)  # type: ignore[return-value]
-        )
+    ) -> RunResult[Any]:
+        """Synchronous wrapper around run()."""
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(self.run(prompt, deps=deps, **kwargs))
+        finally:
+            loop.close()
 
     async def interrupt(self) -> None:
         """Interrupt a running agent. No-op if not running."""
