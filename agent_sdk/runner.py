@@ -114,14 +114,18 @@ class Runner(Generic[DepsT, OutputT]):
                 run_kwargs['message_history'] = message_history
 
             if self._hooks:
+                # Wrap the agent's function toolset with hook interception.
+                # Use override(tools=[], toolsets=[HookToolset(wrapped=original)])
+                # to clear function tools and provide them via wrapped toolset instead.
                 hook_toolset = HookToolset(
-                    wrapped=self._agent._toolset,  # type: ignore[attr-defined]
+                    wrapped=self._agent._function_toolset,
                     hooks=self._hooks,
                     metrics=metrics,
                 )
-                run_kwargs['toolsets'] = [hook_toolset]
-
-            pydantic_result = await self._agent.run(prompt, **run_kwargs)
+                with self._agent.override(tools=[], toolsets=[hook_toolset]):
+                    pydantic_result = await self._agent.run(prompt, **run_kwargs)
+            else:
+                pydantic_result = await self._agent.run(prompt, **run_kwargs)
 
             output = pydantic_result.output
 
