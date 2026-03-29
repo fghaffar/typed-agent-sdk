@@ -48,6 +48,17 @@ from agent_sdk.hooks import (
     on_stop,
 )
 from agent_sdk.permissions import PermissionMode, PermissionPolicy, PermissionResult
+from agent_sdk.query import (
+    AgentOptions,
+    AgentSDKClient,
+    Message,
+    ResultMessage,
+    TextMessage,
+    ToolCallMessage,
+    ToolResultMessage,
+    query,
+    query_sync,
+)
 from agent_sdk.runner import Runner, RunResult
 from agent_sdk.session import JSONSessionBackend, Session, SessionBackend
 from agent_sdk.skills import Skill, SkillMarkdown, load_skills
@@ -62,6 +73,16 @@ from agent_sdk.types import (
 )
 
 __all__ = [
+    # Query (Claude SDK-style DX)
+    'query',
+    'query_sync',
+    'AgentOptions',
+    'AgentSDKClient',
+    'Message',
+    'TextMessage',
+    'ToolCallMessage',
+    'ToolResultMessage',
+    'ResultMessage',
     # Runner
     'Runner',
     'RunResult',
