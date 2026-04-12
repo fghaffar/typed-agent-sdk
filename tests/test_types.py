@@ -1,8 +1,8 @@
-"""Tests for agent_sdk.types."""
+"""Tests for typed_agent_sdk.types."""
 
 from __future__ import annotations
 
-from agent_sdk.types import (
+from typed_agent_sdk.types import (
     HookEvent,
     NotificationData,
     OnErrorData,

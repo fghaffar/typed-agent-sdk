@@ -1,4 +1,4 @@
-"""Tests for agent_sdk guardrails system."""
+"""Tests for typed_agent_sdk guardrails system."""
 
 from __future__ import annotations
 
@@ -8,15 +8,15 @@ from typing import Any
 
 import pytest
 
-from agent_sdk.errors import GuardrailExecutionError, GuardrailTripwireError
-from agent_sdk.guardrails import (
+from typed_agent_sdk.errors import GuardrailExecutionError, GuardrailTripwireError
+from typed_agent_sdk.guardrails import (
     Guardrail,
     GuardrailResult,
     input_guardrail,
     output_guardrail,
     run_guardrails,
 )
-from agent_sdk.types import SDKMetrics
+from typed_agent_sdk.types import SDKMetrics
 
 
 class TestGuardrailResult:
@@ -88,10 +88,7 @@ class TestRunGuardrails:
             await asyncio.sleep(0.1)
             return GuardrailResult(passed=True)
 
-        guards = [
-            Guardrail(name=f'slow-{i}', check=slow_check, kind='input')
-            for i in range(3)
-        ]
+        guards = [Guardrail(name=f'slow-{i}', check=slow_check, kind='input') for i in range(3)]
 
         start = time.monotonic()
         await run_guardrails(guards, 'input', 'test', None)
@@ -149,8 +146,11 @@ class TestRunGuardrails:
 
         guards = [
             Guardrail(
-                name='slow-guard', check=slow, kind='input',
-                timeout=0.01, fail_closed=True,
+                name='slow-guard',
+                check=slow,
+                kind='input',
+                timeout=0.01,
+                fail_closed=True,
             )
         ]
         with pytest.raises(GuardrailTripwireError, match='slow-guard'):

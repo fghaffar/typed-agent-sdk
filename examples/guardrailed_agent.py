@@ -2,8 +2,7 @@
 
 from pydantic_ai import Agent
 
-from agent_sdk import GuardrailResult, Runner, input_guardrail
-
+from typed_agent_sdk import GuardrailResult, Runner, input_guardrail
 
 agent = Agent('test', system_prompt='You are a helpful assistant.')
 

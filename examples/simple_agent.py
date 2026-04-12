@@ -2,9 +2,8 @@
 
 from pydantic_ai import Agent
 
-from agent_sdk import Hook, HookEvent, HookResult, Runner
-from agent_sdk.types import PreToolUseData
-
+from typed_agent_sdk import Hook, HookEvent, HookResult, Runner
+from typed_agent_sdk.types import PreToolUseData
 
 # Use any model — OpenAI, Anthropic, Google, Groq, etc.
 agent = Agent('test', system_prompt='You are a helpful assistant.')
@@ -14,6 +13,7 @@ agent = Agent('test', system_prompt='You are a helpful assistant.')
 def calculate(expression: str) -> str:
     """Evaluate a math expression safely using ast.literal_eval."""
     import ast
+
     return str(ast.literal_eval(expression))
 
 

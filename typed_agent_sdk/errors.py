@@ -1,10 +1,10 @@
-"""Exception hierarchy for agent_sdk."""
+"""Exception hierarchy for typed_agent_sdk."""
 
 from __future__ import annotations
 
 
 class AgentSDKError(Exception):
-    """Base exception for all agent_sdk errors."""
+    """Base exception for all typed_agent_sdk errors."""
 
 
 # --- Hook Errors ---
@@ -85,8 +85,7 @@ class HandoffDepthError(AgentSDKError):
         self.depth = depth
         self.max_depth = max_depth
         super().__init__(
-            f'Handoff depth {depth} exceeds maximum {max_depth}. '
-            f'Possible circular handoff chain.'
+            f'Handoff depth {depth} exceeds maximum {max_depth}. Possible circular handoff chain.'
         )
 
 
@@ -232,6 +231,5 @@ class SessionVersionError(AgentSDKError):
         self.found_version = found_version
         self.expected_version = expected_version
         super().__init__(
-            f'Session schema version mismatch: found {found_version}, '
-            f'expected {expected_version}'
+            f'Session schema version mismatch: found {found_version}, expected {expected_version}'
         )

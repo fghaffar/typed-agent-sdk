@@ -1,16 +1,15 @@
-"""Shared test fixtures for agent_sdk tests."""
+"""Shared test fixtures for typed_agent_sdk tests."""
 
 from __future__ import annotations
 
-import os
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def make_tool_call_model(
@@ -21,9 +20,7 @@ def make_tool_call_model(
 
     call_count = 0
 
-    async def model_func(
-        messages: list[ModelMessage], info: AgentInfo
-    ) -> ModelResponse:
+    async def model_func(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         nonlocal call_count
         call_count += 1
 
@@ -41,9 +38,7 @@ def make_tool_call_model(
 def make_text_model(response: str = 'Hello from test model.') -> FunctionModel:
     """Create a FunctionModel that returns a simple text response."""
 
-    async def model_func(
-        messages: list[ModelMessage], info: AgentInfo
-    ) -> ModelResponse:
+    async def model_func(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         return ModelResponse(parts=[TextPart(content=response)])
 
     return FunctionModel(model_func)

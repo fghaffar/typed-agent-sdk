@@ -8,20 +8,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Sequence
-from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from pydantic_ai import Agent
-from pydantic_ai.messages import ModelMessage
-from pydantic_ai.usage import RunUsage
+from typed_agent_sdk.errors import AgentSDKError
+from typed_agent_sdk.guardrails import Guardrail, run_guardrails
+from typed_agent_sdk.hooks import Hook, HookToolset, _fire_hooks
+from typed_agent_sdk.types import HookEvent, OnErrorData, OnStartData, OnStopData, SDKMetrics
 
-from agent_sdk.errors import AgentSDKError
-from agent_sdk.guardrails import Guardrail, run_guardrails
-from agent_sdk.hooks import Hook, HookToolset, _fire_hooks
-from agent_sdk.types import HookEvent, OnErrorData, OnStartData, OnStopData, SDKMetrics
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
-logger = logging.getLogger('agent_sdk.runner')
+    from pydantic_ai import Agent
+    from pydantic_ai.messages import ModelMessage
+    from pydantic_ai.usage import RunUsage
+
+logger = logging.getLogger('typed_agent_sdk.runner')
 
 OutputT = TypeVar('OutputT')
 DepsT = TypeVar('DepsT')
@@ -97,9 +99,7 @@ class Runner(Generic[DepsT, OutputT]):
             # 2. Run INPUT guardrails (parallel, before model call)
             if self._guardrails:
                 prompt_str = prompt if isinstance(prompt, str) else str(prompt)
-                await run_guardrails(
-                    self._guardrails, 'input', prompt_str, None, metrics=metrics
-                )
+                await run_guardrails(self._guardrails, 'input', prompt_str, None, metrics=metrics)
                 self._debug('InputGuardrails', {'count': len(self._guardrails)})
 
             # 3. Build run kwargs and execute agent
@@ -132,9 +132,7 @@ class Runner(Generic[DepsT, OutputT]):
             # 4. Run OUTPUT guardrails (parallel, after model response)
             if self._guardrails:
                 output_str = str(output) if not isinstance(output, str) else output
-                await run_guardrails(
-                    self._guardrails, 'output', output_str, None, metrics=metrics
-                )
+                await run_guardrails(self._guardrails, 'output', output_str, None, metrics=metrics)
                 self._debug('OutputGuardrails', {'count': len(self._guardrails)})
 
             # 5. Build RunResult

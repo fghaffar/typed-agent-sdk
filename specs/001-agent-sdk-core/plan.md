@@ -28,7 +28,7 @@ Build a lightweight, model-agnostic, type-safe Python agent SDK as a thin orches
 | I. Pydantic AI Foundation | PASS | SDK extends Pydantic AI's `Agent`, `RunContext`, `Tool`, `Model`. No reimplementation of model abstraction, tool schemas, streaming, usage tracking, retries, or testing infrastructure. |
 | II. Model Agnosticism | PASS | All SDK features (hooks, guardrails, skills, handoffs, permissions) operate on Pydantic AI abstractions, never on provider-specific types. Tests validate across 3+ providers. |
 | III. Type Safety First | PASS | All public APIs use generics (`Guardrail[DepsT]`, `Skill[DepsT]`, `Handoff[DepsT]`). `RunContext[DepsT]` flows through hooks, guardrails, skills. `mypy --strict` required. |
-| IV. Lightweight by Design | PASS | 3 core deps + PyYAML for markdown skills. 13 public classes. Single `agent_sdk` package. No database/service requirements. |
+| IV. Lightweight by Design | PASS | 3 core deps + PyYAML for markdown skills. 13 public classes. Single `typed_agent_sdk` package. No database/service requirements. |
 | V. Composition Over Inheritance | PASS | Agents configured via composition (attach skills, hooks, guardrails). `Skill` is a bundle, not a base class. `Protocol` used for extension points (Transport, SessionBackend). |
 | VI. Progressive Complexity | PASS | Simple agent: identical to Pydantic AI. Adding hooks: +3 lines. Adding guardrails: +5 lines. Adding skills: +1 line. Adding handoffs: +5 lines. |
 | VII. Test-First Development | PASS | `TestModel`/`FunctionModel` for unit tests. SDK provides `HookRecorder`, `GuardrailRecorder` test utilities. 90%+ coverage target. |
@@ -54,7 +54,7 @@ specs/001-agent-sdk-core/
 ### Source Code (repository root)
 
 ```text
-agent_sdk/
+typed_agent_sdk/
 ├── __init__.py          # Public API exports (all 13 classes)
 ├── hooks.py             # Hook, HookEvent, HookMatcher, HookCallback, HookResult
 ├── guardrails.py        # Guardrail[DepsT], GuardrailResult, InputGuardrail, OutputGuardrail
@@ -96,7 +96,7 @@ examples/
     └── researcher.md
 ```
 
-**Structure Decision**: Single project layout. The `agent_sdk/` package contains exactly 14 modules (under the 15 limit). Tests mirror the source structure. Examples demonstrate progressive complexity.
+**Structure Decision**: Single project layout. The `typed_agent_sdk/` package contains exactly 14 modules (under the 15 limit). Tests mirror the source structure. Examples demonstrate progressive complexity.
 
 ## Complexity Tracking
 

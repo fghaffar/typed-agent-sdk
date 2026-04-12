@@ -1,6 +1,6 @@
-# agent-sdk Development Guidelines
+# typed-agent-sdk Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-15
+Auto-generated from all feature plans. Last updated: 2026-04-12
 
  > **SELF-CORRECTING FILE**: This file describes common mistakes and confusion points
   > that agents encounter in this project. If you encounter something surprising,              
@@ -12,16 +12,15 @@ Auto-generated from all feature plans. Last updated: 2026-03-15
 
 ## Active Technologies
 
-- Python 3.11+ with pydantic-ai, pydantic, typing-extensions, PyYAML (001-agent-sdk-core)
+- Python 3.10+ with pydantic-ai, pydantic, typing-extensions, PyYAML (001-agent-sdk-core)
 
 ## Project Structure
 
 ```text
-agent_sdk/           # Source package (14 modules max)
+typed_agent_sdk/     # Source package (16 modules)
 tests/               # pytest + pytest-asyncio
 examples/            # Usage examples with progressive complexity
 specs/               # Speckit specifications
-docs/                # Research reports, feature parity matrix
 ```
 
 ## Commands
@@ -37,12 +36,12 @@ pytest tests/ -v
 ruff check . && ruff format .
 
 # Type check
-mypy --strict agent_sdk/
+mypy --strict typed_agent_sdk/
 ```
 
 ## Code Style
 
-- Python 3.11+ with strict typing (mypy --strict, pyright)
+- Python 3.10+ with strict typing (mypy --strict, pyright)
 - Google-style docstrings on all public APIs
 - ruff for linting and formatting
 - All public APIs must use generics (DepsT, OutputT)
@@ -75,6 +74,7 @@ Rules are never removed, only added. Number sequentially (`LR-001`, `LR-002`, ..
 | LR-001 | Gitignored directories (`.specify/`, `.claude/`) must be symlinked into worktrees before running tooling that depends on them. Worktrees only contain committed files. | speckit.analyze failed with "No such file or directory" in 002-event-layer worktree (2026-03-08) |
 | LR-002 | Always use `uv` — never `pip`, `python`, or `venv`. Use `uv run` to execute scripts, `uv add` to add deps, `uv sync` to install. | User preference established (2026-03-08) |
 | LR-003 | System Python is 3.10, not 3.11+. `StrEnum` requires a backport (`class StrEnum(str, Enum)`) for 3.10 compat. pyproject.toml should target `>=3.10`. | `from enum import StrEnum` ImportError during Phase 2 tests (2026-03-15) |
+| LR-004 | On Python 3.10, `asyncio.TimeoutError` is NOT a subclass of builtin `TimeoutError`. Always catch `(TimeoutError, asyncio.TimeoutError)` for cross-version compat. Similarly, `datetime.UTC` doesn't exist in 3.10 — use `timezone.utc`. Never use `ruff --unsafe-fixes` without reviewing UP036/UP041/UP017 changes. | Timeout tests broke after ruff unsafe-fixes removed 3.10 compat shims (2026-04-12) |
 
 
 <!-- MANUAL ADDITIONS START -->

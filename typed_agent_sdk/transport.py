@@ -1,4 +1,4 @@
-"""Transport abstraction for agent_sdk.
+"""Transport abstraction for typed_agent_sdk.
 
 Enables custom agent communication backends (in-process, HTTP, WebSocket).
 """

@@ -10,7 +10,7 @@ pip install agent-sdk
 
 ```python
 from pydantic_ai import Agent
-from agent_sdk import Runner, Hook, HookEvent, on_pre_tool_use
+from typed_agent_sdk import Runner, Hook, HookEvent, on_pre_tool_use
 
 # Use any model — OpenAI, Anthropic, Google, Groq, etc.
 agent = Agent('openai:gpt-4o', system_prompt='You are a helpful assistant.')
@@ -35,7 +35,7 @@ print(result.output)
 ## 2. Adding Guardrails (3 minutes)
 
 ```python
-from agent_sdk import Runner, input_guardrail, GuardrailResult
+from typed_agent_sdk import Runner, input_guardrail, GuardrailResult
 
 @input_guardrail("content-filter")
 async def block_harmful(data, ctx):
@@ -50,7 +50,7 @@ runner = Runner(agent, guardrails=[block_harmful])
 ## 3. Composing Skills (5 minutes)
 
 ```python
-from agent_sdk import Skill, SystemTools
+from typed_agent_sdk import Skill, SystemTools
 
 # Built-in system tools
 sys_tools = SystemTools(allowed=["file_read", "grep", "glob"])
@@ -88,7 +88,7 @@ Arguments: $ARGUMENTS
 Load it:
 
 ```python
-from agent_sdk import load_skills, Runner
+from typed_agent_sdk import load_skills, Runner
 
 skills = load_skills("./skills")
 runner = Runner(agent, skills=skills)
@@ -98,7 +98,7 @@ runner = Runner(agent, skills=skills)
 
 ```python
 from pydantic_ai import Agent
-from agent_sdk import Runner, Handoff
+from typed_agent_sdk import Runner, Handoff
 
 coder = Agent('anthropic:claude-sonnet-4-20250514', system_prompt='You write Python code.')
 reviewer = Agent('openai:gpt-4o', system_prompt='You review code for bugs.')
@@ -119,7 +119,7 @@ result = runner.run_sync("Write a function to check if a number is prime, then r
 ## 6. Permission Policies (2 minutes)
 
 ```python
-from agent_sdk import PermissionPolicy, PermissionMode
+from typed_agent_sdk import PermissionPolicy, PermissionMode
 
 policy = PermissionPolicy(
     mode=PermissionMode.default,
@@ -156,7 +156,7 @@ runner.run_sync("Hello", model='ollama:llama3.2')
 
 ```python
 from pydantic_ai.models.test import TestModel
-from agent_sdk import Runner, HookRecorder
+from typed_agent_sdk import Runner, HookRecorder
 
 recorder = HookRecorder()
 runner = Runner(

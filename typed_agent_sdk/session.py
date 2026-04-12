@@ -1,4 +1,4 @@
-"""Session management for agent_sdk.
+"""Session management for typed_agent_sdk.
 
 Provides conversation persistence, resumption, and forking.
 """
@@ -13,9 +13,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from agent_sdk.errors import SessionNotFoundError, SessionPersistenceError, SessionVersionError
+from typed_agent_sdk.errors import (
+    SessionPersistenceError,
+    SessionVersionError,
+)
 
-logger = logging.getLogger('agent_sdk.session')
+logger = logging.getLogger('typed_agent_sdk.session')
 
 SCHEMA_VERSION = '1'
 

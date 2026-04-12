@@ -1,13 +1,13 @@
-"""Tests for agent_sdk system tools."""
+"""Tests for typed_agent_sdk system tools."""
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from agent_sdk.errors import EditAmbiguousError, EditNotFoundError
-from agent_sdk.system_tools import (
+from typed_agent_sdk.errors import EditAmbiguousError, EditNotFoundError
+from typed_agent_sdk.system_tools import (
     SystemTools,
     bash,
     file_edit,
@@ -16,6 +16,9 @@ from agent_sdk.system_tools import (
     glob_files,
     grep_content,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestBash:

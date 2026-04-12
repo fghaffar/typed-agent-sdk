@@ -1,22 +1,22 @@
-# Public API Contract: agent_sdk
+# Public API Contract: typed_agent_sdk
 
 **Phase 1 Output** | **Date**: 2026-03-15
 
-## Package Exports (`agent_sdk/__init__.py`)
+## Package Exports (`typed_agent_sdk/__init__.py`)
 
 ```python
 # Core orchestration
-from agent_sdk.runner import Runner, RunResult
-from agent_sdk.hooks import Hook, HookEvent, HookMatcher, HookResult
-from agent_sdk.guardrails import Guardrail, GuardrailResult, InputGuardrail, OutputGuardrail
-from agent_sdk.skills import Skill, SkillMarkdown, load_skills
-from agent_sdk.handoffs import Handoff, HandoffResult
-from agent_sdk.permissions import PermissionPolicy, PermissionMode, PermissionResult
-from agent_sdk.system_tools import SystemTools
-from agent_sdk.session import Session, SessionBackend, JSONSessionBackend
-from agent_sdk.transport import Transport, InProcessTransport
-from agent_sdk.types import ToolAnnotations, SDKMetrics, HookEventData
-from agent_sdk.errors import (
+from typed_agent_sdk.runner import Runner, RunResult
+from typed_agent_sdk.hooks import Hook, HookEvent, HookMatcher, HookResult
+from typed_agent_sdk.guardrails import Guardrail, GuardrailResult, InputGuardrail, OutputGuardrail
+from typed_agent_sdk.skills import Skill, SkillMarkdown, load_skills
+from typed_agent_sdk.handoffs import Handoff, HandoffResult
+from typed_agent_sdk.permissions import PermissionPolicy, PermissionMode, PermissionResult
+from typed_agent_sdk.system_tools import SystemTools
+from typed_agent_sdk.session import Session, SessionBackend, JSONSessionBackend
+from typed_agent_sdk.transport import Transport, InProcessTransport
+from typed_agent_sdk.types import ToolAnnotations, SDKMetrics, HookEventData
+from typed_agent_sdk.errors import (
     AgentSDKError,
     SkillConflictError,
     HandoffConfigError,
@@ -26,7 +26,7 @@ from agent_sdk.errors import (
     SkillLoadError,
     SessionNotFoundError,
 )
-from agent_sdk.testing import HookRecorder, GuardrailRecorder
+from typed_agent_sdk.testing import HookRecorder, GuardrailRecorder
 
 # Re-export key Pydantic AI types for convenience
 from pydantic_ai import Agent, RunContext, Tool

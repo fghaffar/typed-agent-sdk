@@ -1,4 +1,4 @@
-"""Permission policies for agent_sdk.
+"""Permission policies for typed_agent_sdk.
 
 Controls which tools an agent can use via glob-pattern based
 allow/block lists and human approval requirements.
@@ -7,14 +7,15 @@ allow/block lists and human approval requirements.
 from __future__ import annotations
 
 import logging
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agent_sdk._utils import glob_match
-from agent_sdk.errors import PatternError, PermissionCallbackError, PermissionDeniedError
+from typed_agent_sdk._utils import glob_match
 
-logger = logging.getLogger('agent_sdk.permissions')
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+logger = logging.getLogger('typed_agent_sdk.permissions')
 
 try:
     from enum import StrEnum
@@ -75,12 +76,11 @@ class PermissionPolicy:
                 )
 
         # 2. Check allowed list (if specified, only matching tools pass)
-        if self.allowed_tools:
-            if not any(glob_match(p, tool_name) for p in self.allowed_tools):
-                return PermissionResult(
-                    allowed=False,
-                    reason=f'Tool "{tool_name}" not in allowed list',
-                )
+        if self.allowed_tools and not any(glob_match(p, tool_name) for p in self.allowed_tools):
+            return PermissionResult(
+                allowed=False,
+                reason=f'Tool "{tool_name}" not in allowed list',
+            )
 
         # 3. Check mode
         if self.mode == PermissionMode.planOnly:
@@ -114,7 +114,9 @@ class PermissionPolicy:
         elif rule_type == 'approval':
             self.require_approval.append(pattern)
         else:
-            raise ValueError(f'Unknown rule type: {rule_type}. Use "allowed", "blocked", or "approval".')
+            raise ValueError(
+                f'Unknown rule type: {rule_type}. Use "allowed", "blocked", or "approval".'
+            )
 
     def remove_rule(self, rule_type: str, pattern: str) -> None:
         """Remove a permission rule at runtime."""

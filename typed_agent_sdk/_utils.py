@@ -1,4 +1,4 @@
-"""Internal utilities for agent_sdk."""
+"""Internal utilities for typed_agent_sdk."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
         raise ValueError('No closing --- found for YAML frontmatter')
 
     yaml_content = content[3:end_idx].strip()
-    body = content[end_idx + 4:].strip()  # Skip past \n---
+    body = content[end_idx + 4 :].strip()  # Skip past \n---
 
     try:
         frontmatter = yaml.safe_load(yaml_content)
@@ -81,8 +81,7 @@ def validate_path_sandbox(path: str | Path, cwd: str | Path) -> Path:
 
     if not str(target).startswith(str(cwd_resolved)):
         raise PermissionError(
-            f'Path "{path}" escapes sandbox. '
-            f'All file operations must be within "{cwd_resolved}"'
+            f'Path "{path}" escapes sandbox. All file operations must be within "{cwd_resolved}"'
         )
 
     return target

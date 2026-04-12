@@ -1,4 +1,4 @@
-"""Composable skills system for agent_sdk.
+"""Composable skills system for typed_agent_sdk.
 
 Skills are reusable bundles of tools, instructions, hooks, and guardrails.
 They can be defined in Python (Skill class) or as markdown files (SkillMarkdown).
@@ -9,14 +9,16 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from agent_sdk._utils import parse_frontmatter
-from agent_sdk.errors import SkillConflictError, SkillLoadError
-from agent_sdk.guardrails import Guardrail
-from agent_sdk.hooks import Hook
+from typed_agent_sdk._utils import parse_frontmatter
+from typed_agent_sdk.errors import SkillConflictError, SkillLoadError
 
-logger = logging.getLogger('agent_sdk.skills')
+if TYPE_CHECKING:
+    from typed_agent_sdk.guardrails import Guardrail
+    from typed_agent_sdk.hooks import Hook
+
+logger = logging.getLogger('typed_agent_sdk.skills')
 
 DepsT = TypeVar('DepsT')
 

@@ -1,4 +1,4 @@
-"""Hook lifecycle system for agent_sdk.
+"""Hook lifecycle system for typed_agent_sdk.
 
 Provides PreToolUse/PostToolUse hooks via WrapperToolset,
 plus OnStart/OnStop/OnError and other lifecycle events.
@@ -11,16 +11,18 @@ import logging
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic_ai._run_context import AgentDepsT, RunContext
-from pydantic_ai.toolsets.abstract import AbstractToolset, ToolsetTool
 from pydantic_ai.toolsets.wrapper import WrapperToolset
 
-from agent_sdk.errors import HookExecutionError
-from agent_sdk.types import HookEvent, HookEventData, SDKMetrics
+from typed_agent_sdk.errors import HookExecutionError
+from typed_agent_sdk.types import HookEvent, HookEventData, SDKMetrics
 
-logger = logging.getLogger('agent_sdk.hooks')
+if TYPE_CHECKING:
+    from pydantic_ai.toolsets.abstract import ToolsetTool
+
+logger = logging.getLogger('typed_agent_sdk.hooks')
 
 DepsT = TypeVar('DepsT')
 
@@ -107,7 +109,7 @@ async def _fire_hooks(
 
         try:
             if hook.fire_and_forget:
-                asyncio.create_task(_run_hook_safe(hook, event_data, ctx))
+                _bg = asyncio.create_task(_run_hook_safe(hook, event_data, ctx))  # noqa: RUF006
                 continue
 
             if hook.timeout:
@@ -123,7 +125,8 @@ async def _fire_hooks(
                     result = HookResult()
                 else:
                     raise TypeError(
-                        f'Hook callback must return HookResult or empty dict, got {type(result).__name__}'
+                        f'Hook callback must return HookResult or empty dict, '
+                        f'got {type(result).__name__}'
                     )
 
             if result.block:
@@ -139,13 +142,14 @@ async def _fire_hooks(
                     block=False,
                     modified_args=result.modified_args or combined_result.modified_args,
                     modified_result=result.modified_result or combined_result.modified_result,
-                    additional_context=result.additional_context or combined_result.additional_context,
+                    additional_context=result.additional_context
+                    or combined_result.additional_context,
                     suppress_output=result.suppress_output or combined_result.suppress_output,
                     continue_=result.continue_ and combined_result.continue_,
                     stop_reason=result.stop_reason or combined_result.stop_reason,
                 )
 
-        except asyncio.TimeoutError:
+        except (TimeoutError, asyncio.TimeoutError):
             logger.warning(
                 'Hook timed out for event %s (timeout=%ss), skipping',
                 event.value,
@@ -182,7 +186,7 @@ class HookToolset(WrapperToolset[AgentDepsT]):
         tool: ToolsetTool[AgentDepsT],
     ) -> Any:
         """Intercept tool calls with PreToolUse/PostToolUse hooks."""
-        from agent_sdk.types import OnErrorData, PostToolUseData, PreToolUseData
+        from typed_agent_sdk.types import OnErrorData, PostToolUseData, PreToolUseData
 
         # Fire PreToolUse hooks
         pre_data = PreToolUseData(
@@ -195,7 +199,8 @@ class HookToolset(WrapperToolset[AgentDepsT]):
         )
 
         if pre_result and pre_result.block:
-            return f'Tool "{name}" was blocked by a hook: {pre_result.stop_reason or "no reason given"}'
+            reason = pre_result.stop_reason or 'no reason given'
+            return f'Tool "{name}" was blocked by a hook: {reason}'
 
         # Apply arg modifications from hooks
         effective_args = tool_args
@@ -235,6 +240,7 @@ class HookToolset(WrapperToolset[AgentDepsT]):
 
 
 # --- Convenience Decorators ---
+
 
 def _make_hook_decorator(
     event: HookEvent,

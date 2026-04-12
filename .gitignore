@@ -1,6 +1,7 @@
 .claude/
 .specify/
 claude-agent-sdk-python/
+claude-agent-sdk-demos/
 pydantic-ai/
 
 # Python

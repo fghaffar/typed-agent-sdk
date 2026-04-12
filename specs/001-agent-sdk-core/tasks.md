@@ -15,7 +15,7 @@
 
 ## Path Conventions
 
-- **Package**: `agent_sdk/` at repository root
+- **Package**: `typed_agent_sdk/` at repository root
 - **Tests**: `tests/` at repository root
 - **Examples**: `examples/` at repository root
 
@@ -25,9 +25,9 @@
 
 **Purpose**: Project initialization, packaging, and tooling
 
-- [x] T001 Create project directory structure: `agent_sdk/`, `tests/`, `examples/`, `examples/skills/` per plan.md
+- [x] T001 Create project directory structure: `typed_agent_sdk/`, `tests/`, `examples/`, `examples/skills/` per plan.md
 - [x] T002 Create `pyproject.toml` with metadata (name=agent-sdk, version=0.1.0, python>=3.11), dependencies (pydantic-ai>=1.0, pydantic>=2.0, typing-extensions>=4.0, PyYAML>=6.0), optional extras ([telemetry], [dev]), and build system
-- [x] T003 [P] Create `agent_sdk/py.typed` marker file (PEP 561)
+- [x] T003 [P] Create `typed_agent_sdk/py.typed` marker file (PEP 561)
 - [x] T004 [P] Configure `ruff` in pyproject.toml (linting + formatting rules)
 - [x] T005 [P] Configure `mypy` strict mode in pyproject.toml (mypy --strict settings)
 - [x] T006 [P] Create `tests/conftest.py` with shared fixtures: FunctionModel agent fixture, sample tool fixtures, tmp_path skill directory fixture
@@ -41,12 +41,12 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [x] T008 Create `agent_sdk/types.py` with shared types: HookEvent (StrEnum with 11 values), HookEventData union type (per-event dataclasses), ToolAnnotations dataclass (read_only, destructive, open_world), SDKMetrics dataclass (hook_invocations, guardrail_checks, handoff_count, guardrail_trips, hooks_blocked)
-- [x] T009 [P] Create `agent_sdk/errors.py` with full exception hierarchy: AgentSDKError (base), GuardrailTripwireError, GuardrailExecutionError, HookExecutionError, SkillConflictError, SkillLoadError, HandoffConfigError, HandoffDepthError, HandoffExecutionError, PermissionDeniedError, MaxTurnsExceeded, BudgetExhausted, EditNotFoundError, EditAmbiguousError, BinaryFileError, ProcessError, SessionNotFoundError, SessionPersistenceError, SessionVersionError, PatternError, PermissionCallbackError
-- [x] T010 [P] Create `agent_sdk/_utils.py` with internal utilities: `glob_match(pattern, name) -> bool` using fnmatch, `parse_frontmatter(content) -> tuple[dict, str]` for robust YAML frontmatter extraction (handles `---` in body), `validate_path_sandbox(path, cwd) -> Path` for path traversal prevention, `truncate_output(text, max_bytes) -> str` for output capping
+- [x] T008 Create `typed_agent_sdk/types.py` with shared types: HookEvent (StrEnum with 11 values), HookEventData union type (per-event dataclasses), ToolAnnotations dataclass (read_only, destructive, open_world), SDKMetrics dataclass (hook_invocations, guardrail_checks, handoff_count, guardrail_trips, hooks_blocked)
+- [x] T009 [P] Create `typed_agent_sdk/errors.py` with full exception hierarchy: AgentSDKError (base), GuardrailTripwireError, GuardrailExecutionError, HookExecutionError, SkillConflictError, SkillLoadError, HandoffConfigError, HandoffDepthError, HandoffExecutionError, PermissionDeniedError, MaxTurnsExceeded, BudgetExhausted, EditNotFoundError, EditAmbiguousError, BinaryFileError, ProcessError, SessionNotFoundError, SessionPersistenceError, SessionVersionError, PatternError, PermissionCallbackError
+- [x] T010 [P] Create `typed_agent_sdk/_utils.py` with internal utilities: `glob_match(pattern, name) -> bool` using fnmatch, `parse_frontmatter(content) -> tuple[dict, str]` for robust YAML frontmatter extraction (handles `---` in body), `validate_path_sandbox(path, cwd) -> Path` for path traversal prevention, `truncate_output(text, max_bytes) -> str` for output capping
 - [x] T011 [P] Create `tests/test_types.py` with tests for HookEvent enum values, HookEventData construction, SDKMetrics defaults
 - [x] T012 [P] Create `tests/test_utils.py` with tests for glob_match (wildcards, exact, special chars), parse_frontmatter (valid, invalid YAML, `---` in body, missing frontmatter), validate_path_sandbox (valid subpath, `../` traversal, absolute path outside cwd, symlink escape), truncate_output (under limit, at limit, over limit)
-- [x] T013 Create `agent_sdk/__init__.py` with all public exports per contracts/public-api.md (initially importing from types and errors only; other imports added as modules are created)
+- [x] T013 Create `typed_agent_sdk/__init__.py` with all public exports per contracts/public-api.md (initially importing from types and errors only; other imports added as modules are created)
 
 **Checkpoint**: Foundation ready — types, errors, utilities, and test fixtures in place. User story implementation can begin.
 
@@ -64,11 +64,11 @@
 
 ### Implementation for User Story 1
 
-- [x] T015 [P] [US1] Create `agent_sdk/hooks.py` with HookMatcher, HookResult, HookCallback, Hook, HookToolset (WrapperToolset), 11 convenience decorators
+- [x] T015 [P] [US1] Create `typed_agent_sdk/hooks.py` with HookMatcher, HookResult, HookCallback, Hook, HookToolset (WrapperToolset), 11 convenience decorators
 - [x] T016 [US1] Create HookToolset in hooks.py extending WrapperToolset with PreToolUse/PostToolUse/OnError interception, priority sorting, timeout, block/modify, fire-and-forget
-- [x] T017 [US1] Create agent_sdk/runner.py with Runner class — run(), run_sync(), interrupt(), re-entrancy guard, empty prompt validation, OnStart/OnStop/OnError hooks, toolsets param injection
+- [x] T017 [US1] Create typed_agent_sdk/runner.py with Runner class — run(), run_sync(), interrupt(), re-entrancy guard, empty prompt validation, OnStart/OnStop/OnError hooks, toolsets param injection
 - [x] T018 [US1] Create RunResult dataclass with output, messages, usage (RunUsage), sdk_metrics (SDKMetrics), session_id, stop_reason
-- [x] T019 [US1] Update agent_sdk/__init__.py to export Hook, HookEvent, HookMatcher, HookResult, Runner, RunResult, and hook decorators
+- [x] T019 [US1] Update typed_agent_sdk/__init__.py to export Hook, HookEvent, HookMatcher, HookResult, Runner, RunResult, and hook decorators
 - [x] T020 [US1] Create `examples/simple_agent.py` demonstrating agent with PreToolUse logging hook per quickstart.md
 
 **Checkpoint**: User Story 1 complete. An agent with hooks works end-to-end. This is the MVP.
@@ -87,9 +87,9 @@
 
 ### Implementation for User Story 2
 
-- [x] T022 [P] [US2] Create `agent_sdk/guardrails.py` with: GuardrailResult dataclass (passed, reason, tripwire), GuardrailCheckFunc Protocol, Guardrail[DepsT] generic class (name, check, kind, timeout, fail_closed), InputGuardrail/OutputGuardrail convenience aliases, input_guardrail/output_guardrail decorator factories
-- [x] T023 [US2] Extend `agent_sdk/runner.py` Runner: add guardrails parameter, implement `_run_input_guardrails()` (asyncio.gather with per-guardrail asyncio.wait_for timeout, fail-open/fail-closed logic, tripwire short-circuit), implement `_run_output_guardrails()` (same pattern on RunResult.output). Wire into run() lifecycle: OnStart → input guardrails → agent.run() → output guardrails → OnStop. Log GuardrailResult.reason for non-passing guardrails.
-- [x] T024 [US2] Update `agent_sdk/__init__.py` to export Guardrail, GuardrailResult, InputGuardrail, OutputGuardrail, input_guardrail, output_guardrail
+- [x] T022 [P] [US2] Create `typed_agent_sdk/guardrails.py` with: GuardrailResult dataclass (passed, reason, tripwire), GuardrailCheckFunc Protocol, Guardrail[DepsT] generic class (name, check, kind, timeout, fail_closed), InputGuardrail/OutputGuardrail convenience aliases, input_guardrail/output_guardrail decorator factories
+- [x] T023 [US2] Extend `typed_agent_sdk/runner.py` Runner: add guardrails parameter, implement `_run_input_guardrails()` (asyncio.gather with per-guardrail asyncio.wait_for timeout, fail-open/fail-closed logic, tripwire short-circuit), implement `_run_output_guardrails()` (same pattern on RunResult.output). Wire into run() lifecycle: OnStart → input guardrails → agent.run() → output guardrails → OnStop. Log GuardrailResult.reason for non-passing guardrails.
+- [x] T024 [US2] Update `typed_agent_sdk/__init__.py` to export Guardrail, GuardrailResult, InputGuardrail, OutputGuardrail, input_guardrail, output_guardrail
 - [x] T025 [US2] Create `examples/guardrailed_agent.py` demonstrating input content filter guardrail per quickstart.md
 
 **Checkpoint**: User Stories 1 AND 2 complete. Hooks + Guardrails work independently.
@@ -108,10 +108,10 @@
 
 ### Implementation for User Story 7
 
-- [x] T027 [P] [US7] Create markdown skill loading in `agent_sdk/skills.py`: `load_skills(directory, recursive=True) -> list[SkillMarkdown]` function, SkillMarkdown dataclass (name, description, tools, handoffs, instructions, source_path). Uses `_utils.parse_frontmatter()` and `yaml.safe_load()`. Validates required fields (name, description). Supports nested directory namespacing. Handles $ARGUMENTS placeholder.
+- [x] T027 [P] [US7] Create markdown skill loading in `typed_agent_sdk/skills.py`: `load_skills(directory, recursive=True) -> list[SkillMarkdown]` function, SkillMarkdown dataclass (name, description, tools, handoffs, instructions, source_path). Uses `_utils.parse_frontmatter()` and `yaml.safe_load()`. Validates required fields (name, description). Supports nested directory namespacing. Handles $ARGUMENTS placeholder.
 - [x] T028 [US7] Create `examples/skills/code-reviewer.md` example markdown skill per quickstart.md
 - [x] T029 [US7] Create `examples/skills/researcher.md` example markdown skill
-- [x] T030 [US7] Update `agent_sdk/__init__.py` to export SkillMarkdown, load_skills
+- [x] T030 [US7] Update `typed_agent_sdk/__init__.py` to export SkillMarkdown, load_skills
 
 **Checkpoint**: Markdown skills can be loaded and parsed. No Python code required to define a skill.
 
@@ -129,9 +129,9 @@
 
 ### Implementation for User Story 3
 
-- [x] T032 [P] [US3] Create `agent_sdk/skills.py` Skill[DepsT] class extending AbstractToolset[DepsT]: __init__(name, description, tools, instructions, hooks, guardrails, permissions), implement get_tools() returning tool dict, implement call_tool() delegating to function tools. Include tool name conflict detection across skills.
-- [ ] T033 [US3] Extend `agent_sdk/runner.py` Runner: add skills parameter. On run(), merge skill toolsets into CombinedToolset, merge skill hooks into hooks list, merge skill guardrails into guardrails list, append skill instructions to agent system prompt via agent.override(). Handle SkillConflictError at registration time.
-- [x] T034 [US3] Update `agent_sdk/__init__.py` to export Skill
+- [x] T032 [P] [US3] Create `typed_agent_sdk/skills.py` Skill[DepsT] class extending AbstractToolset[DepsT]: __init__(name, description, tools, instructions, hooks, guardrails, permissions), implement get_tools() returning tool dict, implement call_tool() delegating to function tools. Include tool name conflict detection across skills.
+- [ ] T033 [US3] Extend `typed_agent_sdk/runner.py` Runner: add skills parameter. On run(), merge skill toolsets into CombinedToolset, merge skill hooks into hooks list, merge skill guardrails into guardrails list, append skill instructions to agent system prompt via agent.override(). Handle SkillConflictError at registration time.
+- [x] T034 [US3] Update `typed_agent_sdk/__init__.py` to export Skill
 - [ ] T035 [US3] Create `examples/skill_composition.py` demonstrating multiple skills composed on one agent per quickstart.md
 
 **Checkpoint**: Skills compose cleanly. Users can package and share reusable agent capabilities.
@@ -150,9 +150,9 @@
 
 ### Implementation for User Story 4
 
-- [x] T037 [P] [US4] Create `agent_sdk/handoffs.py` with: Handoff[DepsT] generic class (target, description, filter, context_transformer, max_depth), HandoffResult dataclass (output, agent_name, depth, usage). Create internal `_create_handoff_tool()` that returns a Pydantic AI Tool wrapping the handoff logic: check depth via RunContext metadata, fire PreHandoff hooks, optionally transform context, call target.run(), fire PostHandoff hooks, return result.
-- [ ] T038 [US4] Extend `agent_sdk/runner.py` Runner: add handoffs parameter. On run(), create handoff tools via `_create_handoff_tool()` for each Handoff, add to CombinedToolset alongside skill tools. Track handoff depth in RunContext metadata. Increment SDKMetrics.handoff_count.
-- [x] T039 [US4] Update `agent_sdk/__init__.py` to export Handoff, HandoffResult
+- [x] T037 [P] [US4] Create `typed_agent_sdk/handoffs.py` with: Handoff[DepsT] generic class (target, description, filter, context_transformer, max_depth), HandoffResult dataclass (output, agent_name, depth, usage). Create internal `_create_handoff_tool()` that returns a Pydantic AI Tool wrapping the handoff logic: check depth via RunContext metadata, fire PreHandoff hooks, optionally transform context, call target.run(), fire PostHandoff hooks, return result.
+- [ ] T038 [US4] Extend `typed_agent_sdk/runner.py` Runner: add handoffs parameter. On run(), create handoff tools via `_create_handoff_tool()` for each Handoff, add to CombinedToolset alongside skill tools. Track handoff depth in RunContext metadata. Increment SDKMetrics.handoff_count.
+- [x] T039 [US4] Update `typed_agent_sdk/__init__.py` to export Handoff, HandoffResult
 - [ ] T040 [US4] Create `examples/multi_agent.py` demonstrating triage → coder → reviewer handoff per quickstart.md
 
 **Checkpoint**: Multi-agent handoffs work. Users can build delegation hierarchies.
@@ -171,9 +171,9 @@
 
 ### Implementation for User Story 8
 
-- [x] T042 [P] [US8] Create `agent_sdk/system_tools.py` with individual tool functions: `async bash(command, cwd, timeout, env) -> str` using asyncio.create_subprocess_exec with output capping via `_utils.truncate_output()`, `async file_read(path, offset, limit) -> str` with binary detection and sandbox check via `_utils.validate_path_sandbox()`, `async file_write(path, content) -> str` with parent dir creation and sandbox check, `async file_edit(path, old_string, new_string) -> str` with uniqueness check and sandbox check, `async glob_files(pattern, path) -> str` using pathlib.Path.glob, `async grep_content(pattern, path, include) -> str` wrapping subprocess grep/rg with Python re fallback
-- [x] T043 [US8] Create `SystemTools` class in `agent_sdk/system_tools.py` extending Skill: __init__(allowed, cwd, bash_timeout, env, sandbox, max_output_bytes). Registers selected tool functions as Pydantic AI tools using @tool decorator. Default sandbox=True. Default max_output_bytes=5_242_880 (5MB).
-- [x] T044 [US8] Update `agent_sdk/__init__.py` to export SystemTools
+- [x] T042 [P] [US8] Create `typed_agent_sdk/system_tools.py` with individual tool functions: `async bash(command, cwd, timeout, env) -> str` using asyncio.create_subprocess_exec with output capping via `_utils.truncate_output()`, `async file_read(path, offset, limit) -> str` with binary detection and sandbox check via `_utils.validate_path_sandbox()`, `async file_write(path, content) -> str` with parent dir creation and sandbox check, `async file_edit(path, old_string, new_string) -> str` with uniqueness check and sandbox check, `async glob_files(pattern, path) -> str` using pathlib.Path.glob, `async grep_content(pattern, path, include) -> str` wrapping subprocess grep/rg with Python re fallback
+- [x] T043 [US8] Create `SystemTools` class in `typed_agent_sdk/system_tools.py` extending Skill: __init__(allowed, cwd, bash_timeout, env, sandbox, max_output_bytes). Registers selected tool functions as Pydantic AI tools using @tool decorator. Default sandbox=True. Default max_output_bytes=5_242_880 (5MB).
+- [x] T044 [US8] Update `typed_agent_sdk/__init__.py` to export SystemTools
 - [ ] T045 [US8] Create `examples/system_tools_agent.py` demonstrating agent with SystemTools(allowed=["file_read", "grep", "glob"]) per quickstart.md
 
 **Checkpoint**: Agents can interact with the filesystem and run commands. Linux ecosystem integration complete.
@@ -192,10 +192,10 @@
 
 ### Implementation for User Story 5
 
-- [x] T047 [P] [US5] Create `agent_sdk/permissions.py` with: PermissionMode (StrEnum: default, readOnly, unrestricted, planOnly), PermissionResult dataclass (allowed, reason, requires_approval), PermissionPolicy class (mode, allowed_tools, blocked_tools, require_approval, approval_callback). Implement `check(tool_name, tool_args) -> PermissionResult` with evaluation chain: blocked check → allowed check → mode check → approval check. Implement `add_rule()` and `remove_rule()` for dynamic modification. Use `_utils.glob_match()` for pattern matching.
-- [ ] T048 [US5] Create internal `PermissionToolset` in `agent_sdk/permissions.py` extending PreparedToolset or WrapperToolset: override `get_tools()` to filter tools based on PermissionPolicy. For require_approval matches, wrap tools with Pydantic AI's ApprovalRequiredToolset. Wire into Runner toolset chain.
-- [ ] T049 [US5] Extend `agent_sdk/runner.py` Runner: add permissions parameter. On run(), wrap toolsets with PermissionToolset if permissions configured. Position in chain: HookToolset(PermissionToolset(CombinedToolset(...))).
-- [x] T050 [US5] Update `agent_sdk/__init__.py` to export PermissionPolicy, PermissionMode, PermissionResult
+- [x] T047 [P] [US5] Create `typed_agent_sdk/permissions.py` with: PermissionMode (StrEnum: default, readOnly, unrestricted, planOnly), PermissionResult dataclass (allowed, reason, requires_approval), PermissionPolicy class (mode, allowed_tools, blocked_tools, require_approval, approval_callback). Implement `check(tool_name, tool_args) -> PermissionResult` with evaluation chain: blocked check → allowed check → mode check → approval check. Implement `add_rule()` and `remove_rule()` for dynamic modification. Use `_utils.glob_match()` for pattern matching.
+- [ ] T048 [US5] Create internal `PermissionToolset` in `typed_agent_sdk/permissions.py` extending PreparedToolset or WrapperToolset: override `get_tools()` to filter tools based on PermissionPolicy. For require_approval matches, wrap tools with Pydantic AI's ApprovalRequiredToolset. Wire into Runner toolset chain.
+- [ ] T049 [US5] Extend `typed_agent_sdk/runner.py` Runner: add permissions parameter. On run(), wrap toolsets with PermissionToolset if permissions configured. Position in chain: HookToolset(PermissionToolset(CombinedToolset(...))).
+- [x] T050 [US5] Update `typed_agent_sdk/__init__.py` to export PermissionPolicy, PermissionMode, PermissionResult
 
 **Checkpoint**: Permission policies work. Tools are filtered before the model sees them.
 
@@ -213,7 +213,7 @@
 
 ### Implementation for User Story 6
 
-- [ ] T052 [US6] Complete `agent_sdk/runner.py` Runner with remaining features: max_turns tracking (count tool call rounds, raise MaxTurnsExceeded), max_budget_tokens tracking (check RunUsage after each step, raise BudgetExhausted), interrupt() method (set asyncio.Event flag, check flag in loop), run_sync() wrapper (use anyio.from_thread.run), run_stream() (use agent.run_stream() with override, fire hooks via EventStreamHandler integration), PreModelCall/PostModelCall hooks (via HistoryProcessor for pre, post-run inspection for post), PreCompact hook (via HistoryProcessor detecting message count reduction), Notification hook (callable from user code)
+- [ ] T052 [US6] Complete `typed_agent_sdk/runner.py` Runner with remaining features: max_turns tracking (count tool call rounds, raise MaxTurnsExceeded), max_budget_tokens tracking (check RunUsage after each step, raise BudgetExhausted), interrupt() method (set asyncio.Event flag, check flag in loop), run_sync() wrapper (use anyio.from_thread.run), run_stream() (use agent.run_stream() with override, fire hooks via EventStreamHandler integration), PreModelCall/PostModelCall hooks (via HistoryProcessor for pre, post-run inspection for post), PreCompact hook (via HistoryProcessor detecting message count reduction), Notification hook (callable from user code)
 - [x] T053 [US6] Implement SDKMetrics tracking in Runner: count hook_invocations (increment in HookToolset), guardrail_checks (increment in _run_guardrails), handoff_count (increment in handoff tool), guardrail_trips, hooks_blocked. Attach to RunResult.
 - [x] T054 [US6] Add debug_callback support to Runner: structured log output for all lifecycle events (hook fired, guardrail checked, tool called, handoff executed). Format: `debug_callback(event_type: str, data: dict[str, Any])`.
 
@@ -233,9 +233,9 @@
 
 ### Implementation for User Story 9
 
-- [x] T056 [P] [US9] Create `agent_sdk/session.py` with: Session dataclass (session_id UUID, messages, metadata, created_at, updated_at, agent_name, parent_session_id), SessionBackend Protocol (save, load, list, delete async methods), JSONSessionBackend class (directory-based, one JSON file per session, uses Pydantic AI's ModelMessagesTypeAdapter, includes schema_version field)
-- [ ] T057 [US9] Extend `agent_sdk/runner.py` Runner: add session_backend parameter. On run(), if session_id provided, load session and prepend messages. After run(), save session with updated messages. Implement resume(session_id, prompt) as load + run. Implement fork_session(session_id) as load + copy with new ID + parent ref.
-- [x] T058 [US9] Update `agent_sdk/__init__.py` to export Session, SessionBackend, JSONSessionBackend
+- [x] T056 [P] [US9] Create `typed_agent_sdk/session.py` with: Session dataclass (session_id UUID, messages, metadata, created_at, updated_at, agent_name, parent_session_id), SessionBackend Protocol (save, load, list, delete async methods), JSONSessionBackend class (directory-based, one JSON file per session, uses Pydantic AI's ModelMessagesTypeAdapter, includes schema_version field)
+- [ ] T057 [US9] Extend `typed_agent_sdk/runner.py` Runner: add session_backend parameter. On run(), if session_id provided, load session and prepend messages. After run(), save session with updated messages. Implement resume(session_id, prompt) as load + run. Implement fork_session(session_id) as load + copy with new ID + parent ref.
+- [x] T058 [US9] Update `typed_agent_sdk/__init__.py` to export Session, SessionBackend, JSONSessionBackend
 
 **Checkpoint**: Sessions persist. Conversations can be resumed across restarts.
 
@@ -245,10 +245,10 @@
 
 **Purpose**: Transport abstraction for remote agents + test utilities for SDK consumers
 
-- [x] T059 [P] Create `agent_sdk/transport.py` with: Transport Protocol (run, run_stream methods), InProcessTransport class (direct agent.run() passthrough). Minimal for v0.1 — enables future HTTP/WebSocket transports.
-- [x] T060 [P] Create `agent_sdk/testing.py` with: HookRecorder class (records hook invocations, provides assert_called, assert_not_called, assert_order, get_hook methods), GuardrailRecorder class (records guardrail checks, provides assert_tripped, assert_passed methods). Both integrate with FunctionModel testing pattern.
+- [x] T059 [P] Create `typed_agent_sdk/transport.py` with: Transport Protocol (run, run_stream methods), InProcessTransport class (direct agent.run() passthrough). Minimal for v0.1 — enables future HTTP/WebSocket transports.
+- [x] T060 [P] Create `typed_agent_sdk/testing.py` with: HookRecorder class (records hook invocations, provides assert_called, assert_not_called, assert_order, get_hook methods), GuardrailRecorder class (records guardrail checks, provides assert_tripped, assert_passed methods). Both integrate with FunctionModel testing pattern.
 - [x] T061 [P] Create `tests/test_transport.py` with tests: test_in_process_transport_runs (basic run through InProcessTransport), test_transport_protocol_compliance (assert InProcessTransport implements Protocol)
-- [x] T062 [P] Update `agent_sdk/__init__.py` to export Transport, InProcessTransport, HookRecorder, GuardrailRecorder
+- [x] T062 [P] Update `typed_agent_sdk/__init__.py` to export Transport, InProcessTransport, HookRecorder, GuardrailRecorder
 
 ---
 
@@ -265,8 +265,8 @@
 
 **Purpose**: Documentation, type checking, final quality gates
 
-- [ ] T065 Run `mypy --strict agent_sdk/` and fix all type errors across all modules
-- [ ] T066 Run `ruff check agent_sdk/ tests/` and fix all linting issues
+- [ ] T065 Run `mypy --strict typed_agent_sdk/` and fix all type errors across all modules
+- [ ] T066 Run `ruff check typed_agent_sdk/ tests/` and fix all linting issues
 - [ ] T067 [P] Add Google-style docstrings to all public APIs in all modules (13 classes + decorators + functions)
 - [ ] T068 [P] Run full test suite `pytest tests/ -v` and ensure all tests pass with 90%+ coverage
 - [ ] T069 [P] Review all ASCII diagrams in plan.md — verify they match final implementation

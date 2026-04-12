@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from agent_sdk.errors import SkillConflictError, SkillLoadError
-from agent_sdk.skills import SkillMarkdown, load_skills
+from typed_agent_sdk.errors import SkillConflictError, SkillLoadError
+from typed_agent_sdk.skills import SkillMarkdown, load_skills
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestLoadSkills:
     def test_load_valid_skill(self, tmp_skills_dir: Path) -> None:
         (tmp_skills_dir / 'valid.md').write_text(
-            '---\nname: valid-skill\ndescription: A valid skill\ntools: [read, grep]\n---\nDo stuff.\n'
+            '---\nname: valid-skill\ndescription: A valid skill\n'
+            'tools: [read, grep]\n---\nDo stuff.\n'
         )
         skills = load_skills(tmp_skills_dir)
         assert len(skills) == 1
@@ -42,23 +46,17 @@ class TestLoadSkills:
         assert skills[0].name == 'coding.reviewer'
 
     def test_invalid_yaml_raises(self, tmp_skills_dir: Path) -> None:
-        (tmp_skills_dir / 'bad.md').write_text(
-            '---\n: invalid: yaml:\n---\nBody\n'
-        )
+        (tmp_skills_dir / 'bad.md').write_text('---\n: invalid: yaml:\n---\nBody\n')
         with pytest.raises(SkillLoadError, match='Invalid YAML'):
             load_skills(tmp_skills_dir)
 
     def test_missing_name_raises(self, tmp_skills_dir: Path) -> None:
-        (tmp_skills_dir / 'noname.md').write_text(
-            '---\ndescription: No name field\n---\nBody\n'
-        )
+        (tmp_skills_dir / 'noname.md').write_text('---\ndescription: No name field\n---\nBody\n')
         with pytest.raises(SkillLoadError, match='Missing required field: name'):
             load_skills(tmp_skills_dir)
 
     def test_missing_description_raises(self, tmp_skills_dir: Path) -> None:
-        (tmp_skills_dir / 'nodesc.md').write_text(
-            '---\nname: test\n---\nBody\n'
-        )
+        (tmp_skills_dir / 'nodesc.md').write_text('---\nname: test\n---\nBody\n')
         with pytest.raises(SkillLoadError, match='Missing required field: description'):
             load_skills(tmp_skills_dir)
 
@@ -96,12 +94,8 @@ class TestLoadSkills:
         assert skills[0].handoffs[0].agent == 'reviewer'
 
     def test_duplicate_name_raises(self, tmp_skills_dir: Path) -> None:
-        (tmp_skills_dir / 'a.md').write_text(
-            '---\nname: dupe\ndescription: First\n---\nA\n'
-        )
-        (tmp_skills_dir / 'b.md').write_text(
-            '---\nname: dupe\ndescription: Second\n---\nB\n'
-        )
+        (tmp_skills_dir / 'a.md').write_text('---\nname: dupe\ndescription: First\n---\nA\n')
+        (tmp_skills_dir / 'b.md').write_text('---\nname: dupe\ndescription: Second\n---\nB\n')
         with pytest.raises(SkillConflictError, match='dupe'):
             load_skills(tmp_skills_dir)
 
@@ -115,9 +109,7 @@ class TestLoadSkills:
 
 class TestSkillMarkdown:
     def test_with_arguments_returns_copy(self) -> None:
-        skill = SkillMarkdown(
-            name='test', description='Test', instructions='Do $ARGUMENTS now'
-        )
+        skill = SkillMarkdown(name='test', description='Test', instructions='Do $ARGUMENTS now')
         replaced = skill.with_arguments('the thing')
         assert replaced.instructions == 'Do the thing now'
         assert skill.instructions == 'Do $ARGUMENTS now'  # Original unchanged

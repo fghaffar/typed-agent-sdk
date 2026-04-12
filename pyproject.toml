@@ -3,21 +3,22 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agent-sdk"
+name = "typed-agent-sdk"
 version = "0.1.0"
 description = "A lightweight, model-agnostic, type-safe agent SDK built on Pydantic AI"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Agent SDK Contributors" },
+    { name = "Faisal Ghaffar" },
 ]
-keywords = ["agent", "sdk", "llm", "pydantic-ai", "hooks", "guardrails"]
+keywords = ["agent", "sdk", "llm", "pydantic-ai", "hooks", "guardrails", "typed", "model-agnostic"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -41,7 +42,7 @@ dev = [
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py310"
 line-length = 100
 
 [tool.ruff.lint]
@@ -51,7 +52,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "TCH", "RUF"]
 quote-style = "single"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -61,4 +62,4 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["agent_sdk"]
+packages = ["typed_agent_sdk"]

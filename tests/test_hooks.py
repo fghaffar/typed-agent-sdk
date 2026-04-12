@@ -1,16 +1,20 @@
-"""Tests for agent_sdk hooks system."""
+"""Tests for typed_agent_sdk hooks system."""
 
 from __future__ import annotations
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock
 
 import pytest
 
-from agent_sdk.errors import HookExecutionError
-from agent_sdk.hooks import Hook, HookMatcher, HookResult, HookToolset, _fire_hooks
-from agent_sdk.types import HookEvent, OnStartData, PreToolUseData, PostToolUseData, SDKMetrics
+from typed_agent_sdk.errors import HookExecutionError
+from typed_agent_sdk.hooks import Hook, HookMatcher, HookResult, _fire_hooks
+from typed_agent_sdk.types import (
+    HookEvent,
+    OnStartData,
+    PreToolUseData,
+    SDKMetrics,
+)
 
 
 class TestHookMatcher:
@@ -95,13 +99,19 @@ class TestFireHooks:
 
         # Should fire for Write
         await _fire_hooks(
-            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='Write', tool_args={}),
-            None, target='Write',
+            hooks,
+            HookEvent.PreToolUse,
+            PreToolUseData(tool_name='Write', tool_args={}),
+            None,
+            target='Write',
         )
         # Should NOT fire for Read
         await _fire_hooks(
-            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='Read', tool_args={}),
-            None, target='Read',
+            hooks,
+            HookEvent.PreToolUse,
+            PreToolUseData(tool_name='Read', tool_args={}),
+            None,
+            target='Read',
         )
 
         assert called_for == ['Write']
@@ -114,6 +124,7 @@ class TestFireHooks:
             async def cb(data: Any, ctx: Any) -> HookResult:
                 order.append(priority)
                 return HookResult()
+
             return cb
 
         hooks = [
@@ -132,8 +143,11 @@ class TestFireHooks:
 
         hooks = [Hook(event=HookEvent.PreToolUse, callback=blocking_hook)]
         result = await _fire_hooks(
-            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='test', tool_args={}),
-            None, target='test',
+            hooks,
+            HookEvent.PreToolUse,
+            PreToolUseData(tool_name='test', tool_args={}),
+            None,
+            target='test',
         )
         assert result is not None
         assert result.block is True
@@ -145,8 +159,11 @@ class TestFireHooks:
 
         hooks = [Hook(event=HookEvent.PreToolUse, callback=modifier)]
         result = await _fire_hooks(
-            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='test', tool_args={'x': 1}),
-            None, target='test',
+            hooks,
+            HookEvent.PreToolUse,
+            PreToolUseData(tool_name='test', tool_args={'x': 1}),
+            None,
+            target='test',
         )
         assert result is not None
         assert result.modified_args == {'x': 42}
@@ -217,8 +234,12 @@ class TestFireHooks:
         metrics = SDKMetrics()
         hooks = [Hook(event=HookEvent.PreToolUse, callback=blocker)]
         await _fire_hooks(
-            hooks, HookEvent.PreToolUse, PreToolUseData(tool_name='t', tool_args={}),
-            None, target='t', metrics=metrics,
+            hooks,
+            HookEvent.PreToolUse,
+            PreToolUseData(tool_name='t', tool_args={}),
+            None,
+            target='t',
+            metrics=metrics,
         )
         assert metrics.hooks_blocked == 1
 
@@ -231,9 +252,7 @@ class TestFireHooks:
             executed.set()
             return HookResult()
 
-        hooks = [
-            Hook(event=HookEvent.OnStart, callback=slow_hook, fire_and_forget=True)
-        ]
+        hooks = [Hook(event=HookEvent.OnStart, callback=slow_hook, fire_and_forget=True)]
         # Should return immediately
         await _fire_hooks(hooks, HookEvent.OnStart, OnStartData(prompt='test'), None)
         # Give background task time to complete

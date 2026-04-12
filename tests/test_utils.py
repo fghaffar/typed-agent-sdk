@@ -1,12 +1,20 @@
-"""Tests for agent_sdk._utils."""
+"""Tests for typed_agent_sdk._utils."""
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from agent_sdk._utils import glob_match, parse_frontmatter, truncate_output, validate_path_sandbox
+from typed_agent_sdk._utils import (
+    glob_match,
+    parse_frontmatter,
+    truncate_output,
+    validate_path_sandbox,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestGlobMatch:
@@ -46,7 +54,7 @@ class TestParseFrontmatter:
 
     def test_frontmatter_with_list(self) -> None:
         content = '---\nname: test\ntools:\n  - file_read\n  - grep\n---\nBody'
-        fm, body = parse_frontmatter(content)
+        fm, _body = parse_frontmatter(content)
         assert fm['tools'] == ['file_read', 'grep']
 
     def test_missing_frontmatter_raises(self) -> None:

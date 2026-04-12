@@ -14,16 +14,14 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from agent_sdk._utils import truncate_output, validate_path_sandbox
-from agent_sdk.errors import (
-    BinaryFileError,
+from typed_agent_sdk._utils import truncate_output, validate_path_sandbox
+from typed_agent_sdk.errors import (
     EditAmbiguousError,
     EditNotFoundError,
-    ProcessError,
 )
-from agent_sdk.skills import Skill
+from typed_agent_sdk.skills import Skill
 
-logger = logging.getLogger('agent_sdk.system_tools')
+logger = logging.getLogger('typed_agent_sdk.system_tools')
 
 ALL_SYSTEM_TOOLS = ['bash', 'file_read', 'file_write', 'file_edit', 'glob', 'grep']
 
@@ -64,10 +62,8 @@ async def bash(
         )
 
         try:
-            stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout
-            )
-        except asyncio.TimeoutError:
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except (TimeoutError, asyncio.TimeoutError):
             proc.kill()
             await proc.wait()
             return f'[Command timed out after {timeout}s]'
@@ -260,9 +256,7 @@ async def grep_content(
             elif include and cmd == 'rg':
                 args = [cmd, '-n', '--glob', include, pattern, str(search_dir)]
 
-            result = subprocess.run(
-                args, capture_output=True, text=True, timeout=30
-            )
+            result = subprocess.run(args, capture_output=True, text=True, timeout=30)
             if result.returncode <= 1:  # 0 = found, 1 = not found
                 return result.stdout or f'[No matches for "{pattern}"]'
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -343,8 +337,11 @@ class SystemTools(Skill[Any]):
         async def _bash(command: str) -> str:
             """Execute a shell command."""
             return await bash(
-                command, cwd=cwd, timeout=bash_timeout,
-                env=env, max_output_bytes=max_output,
+                command,
+                cwd=cwd,
+                timeout=bash_timeout,
+                env=env,
+                max_output_bytes=max_output,
             )
 
         async def _file_read(path: str, offset: int = 0, limit: int | None = None) -> str:

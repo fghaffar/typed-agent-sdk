@@ -1,4 +1,4 @@
-"""Test utilities for agent_sdk consumers.
+"""Test utilities for typed_agent_sdk consumers.
 
 Provides HookRecorder and GuardrailRecorder for asserting
 hook execution order and guardrail trigger behavior in tests.
@@ -6,11 +6,13 @@ hook execution order and guardrail trigger behavior in tests.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agent_sdk.guardrails import GuardrailResult
-from agent_sdk.hooks import Hook, HookResult
-from agent_sdk.types import HookEvent, HookEventData
+from typed_agent_sdk.hooks import Hook, HookResult
+from typed_agent_sdk.types import HookEvent, HookEventData
+
+if TYPE_CHECKING:
+    from typed_agent_sdk.guardrails import GuardrailResult
 
 
 class HookRecorder:
@@ -50,10 +52,7 @@ class HookRecorder:
 
     def get_hooks(self) -> list[Hook]:
         """Return hooks for ALL event types that record to this recorder."""
-        return [
-            Hook(event=event, callback=self._record)
-            for event in HookEvent
-        ]
+        return [Hook(event=event, callback=self._record) for event in HookEvent]
 
     def get_hook(self, event: HookEvent | None = None) -> Hook:
         """Return a single hook. If event is None, returns an OnStart hook."""
@@ -65,13 +64,11 @@ class HookRecorder:
         if not matches:
             recorded = [e.value for e, _ in self.events]
             raise AssertionError(
-                f'HookEvent.{event.value} was not called. '
-                f'Recorded events: {recorded}'
+                f'HookEvent.{event.value} was not called. Recorded events: {recorded}'
             )
         if times is not None and len(matches) != times:
             raise AssertionError(
-                f'HookEvent.{event.value} called {len(matches)} times, '
-                f'expected {times}'
+                f'HookEvent.{event.value} called {len(matches)} times, expected {times}'
             )
 
     def assert_not_called(self, event: HookEvent) -> None:
@@ -79,8 +76,7 @@ class HookRecorder:
         matches = [e for e, _ in self.events if e == event]
         if matches:
             raise AssertionError(
-                f'HookEvent.{event.value} was called {len(matches)} times, '
-                f'expected 0'
+                f'HookEvent.{event.value} was called {len(matches)} times, expected 0'
             )
 
     def assert_order(self, events: list[HookEvent]) -> None:
@@ -117,20 +113,14 @@ class GuardrailRecorder:
 
     def assert_tripped(self, name: str | None = None) -> None:
         """Assert a guardrail was tripped."""
-        matches = [
-            (n, r) for n, r in self.checks
-            if (name is None or n == name) and r.tripwire
-        ]
+        matches = [(n, r) for n, r in self.checks if (name is None or n == name) and r.tripwire]
         if not matches:
             target = f'"{name}"' if name else 'any guardrail'
             raise AssertionError(f'{target} was not tripped')
 
     def assert_passed(self, name: str | None = None) -> None:
         """Assert a guardrail passed."""
-        matches = [
-            (n, r) for n, r in self.checks
-            if (name is None or n == name) and r.passed
-        ]
+        matches = [(n, r) for n, r in self.checks if (name is None or n == name) and r.passed]
         if not matches:
             target = f'"{name}"' if name else 'any guardrail'
             raise AssertionError(f'{target} did not pass')

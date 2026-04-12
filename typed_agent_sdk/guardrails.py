@@ -1,4 +1,4 @@
-"""Input/output guardrails for agent_sdk.
+"""Input/output guardrails for typed_agent_sdk.
 
 Guardrails validate prompts before they reach the model (input)
 and responses before they reach the user (output). They run in
@@ -11,12 +11,14 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from agent_sdk.errors import GuardrailExecutionError, GuardrailTripwireError
-from agent_sdk.types import SDKMetrics
+from typed_agent_sdk.errors import GuardrailExecutionError, GuardrailTripwireError
 
-logger = logging.getLogger('agent_sdk.guardrails')
+if TYPE_CHECKING:
+    from typed_agent_sdk.types import SDKMetrics
+
+logger = logging.getLogger('typed_agent_sdk.guardrails')
 
 DepsT = TypeVar('DepsT')
 
@@ -105,9 +107,7 @@ async def _run_single_guardrail(
     """Run a single guardrail with timeout and error handling."""
     try:
         if guardrail.timeout:
-            result = await asyncio.wait_for(
-                guardrail.check(data, ctx), timeout=guardrail.timeout
-            )
+            result = await asyncio.wait_for(guardrail.check(data, ctx), timeout=guardrail.timeout)
         else:
             result = await guardrail.check(data, ctx)
 
@@ -118,7 +118,7 @@ async def _run_single_guardrail(
             )
         return result
 
-    except asyncio.TimeoutError:
+    except (TimeoutError, asyncio.TimeoutError):
         if guardrail.fail_closed:
             logger.warning(
                 'Guardrail "%s" timed out (fail-closed) — triggering tripwire',
@@ -176,7 +176,7 @@ async def run_guardrails(
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     checked_results: list[GuardrailResult] = []
-    for guardrail, result in zip(matching, results):
+    for guardrail, result in zip(matching, results, strict=False):
         if isinstance(result, Exception):
             raise result
 

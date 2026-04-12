@@ -1,18 +1,18 @@
-"""Shared types, enums, and type aliases for agent_sdk."""
+"""Shared types, enums, and type aliases for typed_agent_sdk."""
 
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
 else:
-    from enum import Enum
 
     class StrEnum(str, Enum):  # type: ignore[no-redef]
-        """Backport of StrEnum for Python 3.10."""
+        """Backport for Python 3.10."""
 
 
 class HookEvent(StrEnum):

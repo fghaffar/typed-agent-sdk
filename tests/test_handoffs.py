@@ -1,13 +1,11 @@
-"""Tests for agent_sdk handoff system."""
+"""Tests for typed_agent_sdk handoff system."""
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
-from agent_sdk.errors import HandoffDepthError, HandoffExecutionError
-from agent_sdk.handoffs import Handoff, create_handoff_tool_func
+from typed_agent_sdk.errors import HandoffDepthError
+from typed_agent_sdk.handoffs import Handoff, create_handoff_tool_func
 
 
 class TestHandoff:

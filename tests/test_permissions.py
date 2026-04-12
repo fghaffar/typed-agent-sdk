@@ -1,10 +1,10 @@
-"""Tests for agent_sdk permission policies."""
+"""Tests for typed_agent_sdk permission policies."""
 
 from __future__ import annotations
 
 import pytest
 
-from agent_sdk.permissions import PermissionMode, PermissionPolicy, PermissionResult
+from typed_agent_sdk.permissions import PermissionMode, PermissionPolicy
 
 
 class TestPermissionPolicy:

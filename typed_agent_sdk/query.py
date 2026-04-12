@@ -1,34 +1,38 @@
-"""One-shot query function and streaming client for agent_sdk.
+"""One-shot query function and streaming client for typed-agent-sdk.
 
-Provides Claude Agent SDK-style DX:
+Provides a simple developer experience:
   - query() for one-liner async iteration
   - AgentSDKClient for stateful multi-turn conversations
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelMessage
 
-from agent_sdk.guardrails import Guardrail
-from agent_sdk.hooks import Hook
-from agent_sdk.permissions import PermissionPolicy
-from agent_sdk.runner import RunResult, Runner
-from agent_sdk.types import SDKMetrics
+from typed_agent_sdk.errors import AgentSDKError
+from typed_agent_sdk.permissions import PermissionPolicy
+from typed_agent_sdk.runner import Runner, RunResult
 
-logger = logging.getLogger('agent_sdk.query')
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from pydantic_ai.messages import ModelMessage
+
+    from typed_agent_sdk.guardrails import Guardrail
+    from typed_agent_sdk.hooks import Hook
+    from typed_agent_sdk.types import SDKMetrics
+
+logger = logging.getLogger('typed_agent_sdk.query')
 
 
 # ---------------------------------------------------------------------------
 # Message types yielded during streaming
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class TextMessage:
@@ -72,15 +76,15 @@ Message = TextMessage | ToolCallMessage | ToolResultMessage | ResultMessage
 
 
 # ---------------------------------------------------------------------------
-# Options dataclass (mirrors ClaudeAgentOptions)
+# Options dataclass
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AgentOptions:
     """Configuration for query() and AgentSDKClient.
 
-    Mirrors the Claude Agent SDK's ClaudeAgentOptions pattern but
-    works with any LLM provider supported by Pydantic AI.
+    Works with any LLM provider supported by Pydantic AI.
     """
 
     model: str = 'test'
@@ -96,8 +100,9 @@ class AgentOptions:
 
 
 # ---------------------------------------------------------------------------
-# query() — one-shot async iterator (matches Claude SDK's query())
+# query() — one-shot async iterator
 # ---------------------------------------------------------------------------
+
 
 async def query(
     *,
@@ -111,8 +116,7 @@ async def query(
 ) -> AsyncIterator[Message]:
     """One-shot query that yields messages as they're produced.
 
-    This is the simplest way to use agent-sdk — equivalent to
-    Claude Agent SDK's `query()` function.
+    This is the simplest way to use typed-agent-sdk.
 
     Usage:
         async for message in query(prompt="What is 2+2?", model="openai:gpt-4o"):
@@ -169,7 +173,6 @@ async def query(
     )
 
     # Wrap hooks to capture tool calls/results for streaming
-    tool_events: list[Message] = []
 
     if effective_hooks:
         # The existing hooks handle this — tool events get captured via HookToolset
@@ -219,6 +222,7 @@ async def query(
 # query_sync() — synchronous one-liner
 # ---------------------------------------------------------------------------
 
+
 def query_sync(
     *,
     prompt: str,
@@ -253,14 +257,14 @@ def query_sync(
 
 
 # ---------------------------------------------------------------------------
-# AgentSDKClient — stateful multi-turn (matches ClaudeSDKClient)
+# AgentSDKClient — stateful multi-turn
 # ---------------------------------------------------------------------------
+
 
 class AgentSDKClient:
     """Stateful, multi-turn agent client.
 
-    Mirrors the Claude Agent SDK's ClaudeSDKClient pattern but
-    works with any model.
+    Works with any LLM provider supported by Pydantic AI.
 
     Usage:
         async with AgentSDKClient(options=options) as client:
@@ -319,7 +323,9 @@ class AgentSDKClient:
         After calling send(), iterate with receive() to get messages.
         """
         if not self._runner:
-            raise AgentSDKError('Client not connected. Use `async with AgentSDKClient() as client:`')
+            raise AgentSDKError(
+                'Client not connected. Use `async with AgentSDKClient() as client:`'
+            )
 
         self._last_result = await self._runner.run(
             prompt,

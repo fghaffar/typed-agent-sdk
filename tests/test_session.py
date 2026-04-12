@@ -1,14 +1,17 @@
-"""Tests for agent_sdk session management."""
+"""Tests for typed_agent_sdk session management."""
 
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from agent_sdk.errors import SessionPersistenceError, SessionVersionError
-from agent_sdk.session import JSONSessionBackend, Session
+from typed_agent_sdk.errors import SessionPersistenceError, SessionVersionError
+from typed_agent_sdk.session import JSONSessionBackend, Session
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestJSONSessionBackend:

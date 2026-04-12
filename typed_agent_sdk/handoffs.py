@@ -1,4 +1,4 @@
-"""Multi-agent handoff system for agent_sdk.
+"""Multi-agent handoff system for typed_agent_sdk.
 
 Handoffs enable agents to delegate tasks to specialist agents.
 Each handoff appears as a tool call to the LLM.
@@ -7,21 +7,23 @@ Each handoff appears as a tool call to the LLM.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from pydantic_ai import Agent
-from pydantic_ai.messages import ModelMessage
-from pydantic_ai.usage import RunUsage
+from typed_agent_sdk.errors import HandoffDepthError, HandoffExecutionError
 
-from agent_sdk.errors import HandoffDepthError, HandoffExecutionError
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-logger = logging.getLogger('agent_sdk.handoffs')
+    from pydantic_ai import Agent
+    from pydantic_ai.messages import ModelMessage
+    from pydantic_ai.usage import RunUsage
+
+logger = logging.getLogger('typed_agent_sdk.handoffs')
 
 DepsT = TypeVar('DepsT')
 
-HANDOFF_DEPTH_KEY = '_agent_sdk_handoff_depth'
+HANDOFF_DEPTH_KEY = '_typed_agent_sdk_handoff_depth'
 
 
 @dataclass
