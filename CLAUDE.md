@@ -20,7 +20,6 @@ Auto-generated from all feature plans. Last updated: 2026-04-12
 typed_agent_sdk/     # Source package (16 modules)
 tests/               # pytest + pytest-asyncio
 examples/            # Usage examples with progressive complexity
-specs/               # Speckit specifications
 ```
 
 ## Commands
