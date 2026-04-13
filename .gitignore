@@ -3,6 +3,8 @@
 claude-agent-sdk-python/
 claude-agent-sdk-demos/
 pydantic-ai/
+CLAUDE.md
+specs/
 
 # Python
 __pycache__/
