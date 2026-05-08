@@ -39,12 +39,15 @@ class HookRecorder:
             'OnErrorData': HookEvent.OnError,
             'PreToolUseData': HookEvent.PreToolUse,
             'PostToolUseData': HookEvent.PostToolUse,
+            'PostToolUseFailureData': HookEvent.PostToolUseFailure,
             'PreHandoffData': HookEvent.PreHandoff,
             'PostHandoffData': HookEvent.PostHandoff,
             'PreModelCallData': HookEvent.PreModelCall,
             'PostModelCallData': HookEvent.PostModelCall,
             'PreCompactData': HookEvent.PreCompact,
             'NotificationData': HookEvent.Notification,
+            'UserPromptSubmitData': HookEvent.UserPromptSubmit,
+            'PermissionRequestData': HookEvent.PermissionRequest,
         }
         event = event_map.get(data_name, HookEvent.Notification)
         self.events.append((event, event_data))

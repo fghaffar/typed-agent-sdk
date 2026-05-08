@@ -22,6 +22,8 @@ from typed_agent_sdk.types import HookEvent, HookEventData, SDKMetrics
 if TYPE_CHECKING:
     from pydantic_ai.toolsets.abstract import ToolsetTool
 
+    from typed_agent_sdk.permissions import PermissionPolicy
+
 logger = logging.getLogger('typed_agent_sdk.hooks')
 
 DepsT = TypeVar('DepsT')
@@ -177,6 +179,7 @@ class HookToolset(WrapperToolset[AgentDepsT]):
 
     hooks: list[Hook] = field(default_factory=list)
     metrics: SDKMetrics = field(default_factory=SDKMetrics)
+    policy: PermissionPolicy | None = None
 
     async def call_tool(
         self,
@@ -187,6 +190,17 @@ class HookToolset(WrapperToolset[AgentDepsT]):
     ) -> Any:
         """Intercept tool calls with PreToolUse/PostToolUse hooks."""
         from typed_agent_sdk.types import OnErrorData, PostToolUseData, PreToolUseData
+
+        # Permission gate (runs before PreToolUse so denied tools never fire pre-hooks).
+        if self.policy is not None:
+            perm_result = await self.policy.check_with_hooks(
+                name, tool_args, hooks=self.hooks, metrics=self.metrics
+            )
+            if not perm_result.allowed:
+                reason = perm_result.reason or 'permission denied'
+                if self.metrics:
+                    self.metrics.hooks_blocked += 1
+                return f'Tool "{name}" denied by permission policy: {reason}'
 
         # Fire PreToolUse hooks
         pre_data = PreToolUseData(
@@ -211,7 +225,22 @@ class HookToolset(WrapperToolset[AgentDepsT]):
         try:
             result = await self.wrapped.call_tool(name, effective_args, ctx, tool)
         except Exception as e:
-            # Fire OnError hooks
+            from typed_agent_sdk.types import PostToolUseFailureData
+
+            failure_data = PostToolUseFailureData(
+                tool_name=name,
+                tool_args=effective_args,
+                error=e,
+                tool_call_id=getattr(ctx, 'tool_call_id', None),
+            )
+            await _fire_hooks(
+                self.hooks,
+                HookEvent.PostToolUseFailure,
+                failure_data,
+                ctx,
+                target=name,
+                metrics=self.metrics,
+            )
             error_data = OnErrorData(error=e, context=f'tool:{name}')
             await _fire_hooks(
                 self.hooks, HookEvent.OnError, error_data, ctx, target=name, metrics=self.metrics
@@ -273,12 +302,49 @@ def _make_hook_decorator(
 
 on_pre_tool_use = _make_hook_decorator(HookEvent.PreToolUse)
 on_post_tool_use = _make_hook_decorator(HookEvent.PostToolUse)
+on_post_tool_use_failure = _make_hook_decorator(HookEvent.PostToolUseFailure)
 on_pre_model_call = _make_hook_decorator(HookEvent.PreModelCall)
 on_post_model_call = _make_hook_decorator(HookEvent.PostModelCall)
 on_pre_handoff = _make_hook_decorator(HookEvent.PreHandoff)
 on_post_handoff = _make_hook_decorator(HookEvent.PostHandoff)
+# Anthropic-SDK-aligned aliases for handoff lifecycle.
+on_subagent_start = _make_hook_decorator(HookEvent.SubagentStart)
+on_subagent_stop = _make_hook_decorator(HookEvent.SubagentStop)
 on_error = _make_hook_decorator(HookEvent.OnError)
 on_start = _make_hook_decorator(HookEvent.OnStart)
 on_stop = _make_hook_decorator(HookEvent.OnStop)
 on_pre_compact = _make_hook_decorator(HookEvent.PreCompact)
 on_notification = _make_hook_decorator(HookEvent.Notification)
+on_user_prompt_submit = _make_hook_decorator(HookEvent.UserPromptSubmit)
+on_permission_request = _make_hook_decorator(HookEvent.PermissionRequest)
+
+
+async def fire_user_prompt_submit(
+    hooks: list[Hook],
+    prompt: str,
+    agent_name: str | None = None,
+    metrics: SDKMetrics | None = None,
+) -> HookResult | None:
+    """Fire UserPromptSubmit hooks. Returns the merged HookResult (or block)."""
+    from typed_agent_sdk.types import UserPromptSubmitData
+
+    data = UserPromptSubmitData(prompt=prompt, agent_name=agent_name)
+    return await _fire_hooks(
+        hooks, HookEvent.UserPromptSubmit, data, None, metrics=metrics
+    )
+
+
+async def fire_permission_request(
+    hooks: list[Hook],
+    tool_name: str,
+    tool_args: dict[str, Any],
+    reason: str | None = None,
+    metrics: SDKMetrics | None = None,
+) -> HookResult | None:
+    """Fire PermissionRequest hooks. A returned HookResult with block=True denies."""
+    from typed_agent_sdk.types import PermissionRequestData
+
+    data = PermissionRequestData(tool_name=tool_name, tool_args=tool_args, reason=reason)
+    return await _fire_hooks(
+        hooks, HookEvent.PermissionRequest, data, None, target=tool_name, metrics=metrics
+    )

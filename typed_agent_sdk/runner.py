@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from typed_agent_sdk.errors import AgentSDKError
 from typed_agent_sdk.guardrails import Guardrail, run_guardrails
-from typed_agent_sdk.hooks import Hook, HookToolset, _fire_hooks
+from typed_agent_sdk.hooks import Hook, HookToolset, _fire_hooks, fire_user_prompt_submit
 from typed_agent_sdk.types import HookEvent, OnErrorData, OnStartData, OnStopData, SDKMetrics
 
 if TYPE_CHECKING:
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from pydantic_ai import Agent
     from pydantic_ai.messages import ModelMessage
     from pydantic_ai.usage import RunUsage
+
+    from typed_agent_sdk.permissions import PermissionPolicy
 
 logger = logging.getLogger('typed_agent_sdk.runner')
 
@@ -48,12 +50,19 @@ class Runner(Generic[DepsT, OutputT]):
     skills, handoffs, and session management.
     """
 
+    # Phase 2 (planned): accept an optional ``sandbox: ExecutionBackend`` and
+    # implement ``__aenter__/__aexit__`` so the Runner becomes an async context
+    # manager that calls ``await sandbox.aclose()`` on exit. Until then,
+    # callers using a backend with remote resources must call ``aclose``
+    # themselves in a ``finally`` block. See typed_agent_sdk/execution.py.
+
     def __init__(
         self,
         agent: Agent[Any, Any],
         *,
         hooks: list[Hook] | None = None,
         guardrails: list[Guardrail[Any]] | None = None,
+        permissions: PermissionPolicy | None = None,
         max_turns: int | None = None,
         max_budget_tokens: int | None = None,
         debug_callback: Any | None = None,
@@ -61,6 +70,7 @@ class Runner(Generic[DepsT, OutputT]):
         self._agent = agent
         self._hooks = hooks or []
         self._guardrails = guardrails or []
+        self._permissions = permissions
         self._max_turns = max_turns
         self._max_budget_tokens = max_budget_tokens
         self._debug_callback = debug_callback
@@ -96,7 +106,20 @@ class Runner(Generic[DepsT, OutputT]):
             await _fire_hooks(self._hooks, HookEvent.OnStart, start_data, None, metrics=metrics)
             self._debug('OnStart', {'prompt': str(prompt)[:100], 'agent': self._agent.name})
 
-            # 2. Run INPUT guardrails (parallel, before model call)
+            # 2. Fire UserPromptSubmit hooks (may inject context or block).
+            prompt_str = prompt if isinstance(prompt, str) else str(prompt)
+            ups_result = await fire_user_prompt_submit(
+                self._hooks, prompt_str, agent_name=self._agent.name, metrics=metrics
+            )
+            if ups_result and ups_result.block:
+                raise AgentSDKError(
+                    f'UserPromptSubmit hook blocked execution: '
+                    f'{ups_result.stop_reason or "no reason given"}'
+                )
+            if ups_result and ups_result.additional_context and isinstance(prompt, str):
+                prompt = f'{prompt}\n\n{ups_result.additional_context}'
+
+            # 3. Run INPUT guardrails (parallel, before model call)
             if self._guardrails:
                 prompt_str = prompt if isinstance(prompt, str) else str(prompt)
                 await run_guardrails(self._guardrails, 'input', prompt_str, None, metrics=metrics)
@@ -113,14 +136,13 @@ class Runner(Generic[DepsT, OutputT]):
             if message_history is not None:
                 run_kwargs['message_history'] = message_history
 
-            if self._hooks:
-                # Wrap the agent's function toolset with hook interception.
-                # Use override(tools=[], toolsets=[HookToolset(wrapped=original)])
-                # to clear function tools and provide them via wrapped toolset instead.
+            if self._hooks or self._permissions is not None:
+                # Wrap the agent's function toolset with hook + permission interception.
                 hook_toolset = HookToolset(
                     wrapped=self._agent._function_toolset,
                     hooks=self._hooks,
                     metrics=metrics,
+                    policy=self._permissions,
                 )
                 with self._agent.override(tools=[], toolsets=[hook_toolset]):
                     pydantic_result = await self._agent.run(prompt, **run_kwargs)

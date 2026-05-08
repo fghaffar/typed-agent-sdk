@@ -11,7 +11,7 @@ if sys.version_info >= (3, 11):
     from enum import StrEnum
 else:
 
-    class StrEnum(str, Enum):  # type: ignore[no-redef]
+    class StrEnum(str, Enum):
         """Backport for Python 3.10."""
 
 
@@ -20,15 +20,20 @@ class HookEvent(StrEnum):
 
     PreToolUse = 'PreToolUse'
     PostToolUse = 'PostToolUse'
+    PostToolUseFailure = 'PostToolUseFailure'
     PreModelCall = 'PreModelCall'
     PostModelCall = 'PostModelCall'
     PreHandoff = 'PreHandoff'
     PostHandoff = 'PostHandoff'
+    SubagentStart = 'SubagentStart'
+    SubagentStop = 'SubagentStop'
     OnError = 'OnError'
     OnStart = 'OnStart'
     OnStop = 'OnStop'
     PreCompact = 'PreCompact'
     Notification = 'Notification'
+    UserPromptSubmit = 'UserPromptSubmit'
+    PermissionRequest = 'PermissionRequest'
 
 
 @dataclass(frozen=True)
@@ -47,6 +52,16 @@ class PostToolUseData:
     tool_name: str
     tool_args: dict[str, Any]
     tool_result: Any
+    tool_call_id: str | None = None
+
+
+@dataclass(frozen=True)
+class PostToolUseFailureData:
+    """Event data for PostToolUseFailure hooks."""
+
+    tool_name: str
+    tool_args: dict[str, Any]
+    error: Exception
     tool_call_id: str | None = None
 
 
@@ -124,9 +139,27 @@ class NotificationData:
     notification_type: str = 'info'
 
 
+@dataclass(frozen=True)
+class UserPromptSubmitData:
+    """Event data for UserPromptSubmit hooks."""
+
+    prompt: str
+    agent_name: str | None = None
+
+
+@dataclass(frozen=True)
+class PermissionRequestData:
+    """Event data for PermissionRequest hooks."""
+
+    tool_name: str
+    tool_args: dict[str, Any]
+    reason: str | None = None
+
+
 HookEventData = (
     PreToolUseData
     | PostToolUseData
+    | PostToolUseFailureData
     | PreModelCallData
     | PostModelCallData
     | PreHandoffData
@@ -136,6 +169,8 @@ HookEventData = (
     | OnStopData
     | PreCompactData
     | NotificationData
+    | UserPromptSubmitData
+    | PermissionRequestData
 )
 
 

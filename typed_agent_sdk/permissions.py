@@ -7,6 +7,7 @@ allow/block lists and human approval requirements.
 from __future__ import annotations
 
 import logging
+import sys
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -15,15 +16,18 @@ from typed_agent_sdk._utils import glob_match
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+    from typed_agent_sdk.hooks import Hook
+    from typed_agent_sdk.types import SDKMetrics
+
 logger = logging.getLogger('typed_agent_sdk.permissions')
 
-try:
+if sys.version_info >= (3, 11):
     from enum import StrEnum
-except ImportError:
+else:
     from enum import Enum
 
-    class StrEnum(str, Enum):  # type: ignore[no-redef]
-        pass
+    class StrEnum(str, Enum):
+        """Backport for Python 3.10."""
 
 
 class PermissionMode(StrEnum):
@@ -136,3 +140,52 @@ class PermissionPolicy:
         Returns only the tools that are allowed.
         """
         return [name for name in tool_names if self.check(name).allowed]
+
+    async def check_with_hooks(
+        self,
+        tool_name: str,
+        tool_args: dict[str, Any] | None = None,
+        hooks: list[Hook] | None = None,
+        metrics: SDKMetrics | None = None,
+    ) -> PermissionResult:
+        """Async permission check that consults PermissionRequest hooks.
+
+        Resolution order when ``requires_approval`` is True:
+          1. Fire ``PermissionRequest`` hooks. A hook returning ``block=True`` denies.
+          2. If a non-blocking hook responded, treat the request as approved.
+          3. Otherwise, fall back to ``approval_callback`` if set.
+          4. Otherwise, return the original ``requires_approval=True`` result so
+             the caller can implement its own approval flow.
+        """
+        result = self.check(tool_name, tool_args)
+        if not result.requires_approval:
+            return result
+
+        args = tool_args or {}
+
+        if hooks:
+            from typed_agent_sdk.hooks import fire_permission_request
+
+            hook_result = await fire_permission_request(
+                hooks, tool_name, args, reason=result.reason, metrics=metrics
+            )
+            if hook_result is not None and hook_result.block:
+                return PermissionResult(
+                    allowed=False,
+                    reason=hook_result.stop_reason
+                    or f'Tool "{tool_name}" denied by PermissionRequest hook',
+                )
+            if hook_result is not None:
+                # A hook responded without blocking — treat as approval.
+                return PermissionResult(allowed=True, requires_approval=False)
+
+        if self.approval_callback is not None:
+            approved = await self.approval_callback(tool_name, args)
+            if approved:
+                return PermissionResult(allowed=True, requires_approval=False)
+            return PermissionResult(
+                allowed=False,
+                reason=f'Tool "{tool_name}" denied by approval_callback',
+            )
+
+        return result

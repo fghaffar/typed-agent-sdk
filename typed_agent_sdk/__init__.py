@@ -29,6 +29,11 @@ from typed_agent_sdk.errors import (
     SkillConflictError,
     SkillLoadError,
 )
+from typed_agent_sdk.execution import (
+    ExecResult,
+    ExecutionBackend,
+    LocalBackend,
+)
 from typed_agent_sdk.guardrails import (
     Guardrail,
     GuardrailResult,
@@ -41,11 +46,24 @@ from typed_agent_sdk.hooks import (
     HookMatcher,
     HookResult,
     HookToolset,
+    fire_permission_request,
+    fire_user_prompt_submit,
     on_error,
+    on_notification,
+    on_permission_request,
+    on_post_handoff,
+    on_post_model_call,
     on_post_tool_use,
+    on_post_tool_use_failure,
+    on_pre_compact,
+    on_pre_handoff,
+    on_pre_model_call,
     on_pre_tool_use,
     on_start,
     on_stop,
+    on_subagent_start,
+    on_subagent_stop,
+    on_user_prompt_submit,
 )
 from typed_agent_sdk.permissions import PermissionMode, PermissionPolicy, PermissionResult
 from typed_agent_sdk.query import (
@@ -81,6 +99,9 @@ __all__ = [
     'BudgetExhausted',
     'EditAmbiguousError',
     'EditNotFoundError',
+    # Execution backends
+    'ExecResult',
+    'ExecutionBackend',
     # Guardrails
     'Guardrail',
     'GuardrailExecutionError',
@@ -105,6 +126,7 @@ __all__ = [
     'HookToolset',
     'InProcessTransport',
     'JSONSessionBackend',
+    'LocalBackend',
     'MaxTurnsExceeded',
     'Message',
     'PatternError',
@@ -139,17 +161,30 @@ __all__ = [
     'ToolResultMessage',
     # Transport
     'Transport',
+    'fire_permission_request',
+    'fire_user_prompt_submit',
     'input_guardrail',
     'load_skills',
     'on_error',
+    'on_notification',
+    'on_permission_request',
+    'on_post_handoff',
+    'on_post_model_call',
     'on_post_tool_use',
+    'on_post_tool_use_failure',
+    'on_pre_compact',
+    'on_pre_handoff',
+    'on_pre_model_call',
     'on_pre_tool_use',
     'on_start',
     'on_stop',
+    'on_subagent_start',
+    'on_subagent_stop',
+    'on_user_prompt_submit',
     'output_guardrail',
     # Query
     'query',
     'query_sync',
 ]
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'

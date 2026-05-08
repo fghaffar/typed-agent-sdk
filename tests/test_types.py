@@ -16,22 +16,29 @@ from typed_agent_sdk.types import (
 
 
 class TestHookEvent:
-    def test_all_11_events_exist(self) -> None:
+    def test_all_events_exist(self) -> None:
         events = list(HookEvent)
-        assert len(events) == 11
+        # 11 original + 5 added for Anthropic-SDK parity
+        # (PostToolUseFailure, SubagentStart, SubagentStop, UserPromptSubmit, PermissionRequest)
+        assert len(events) == 16
 
     def test_event_values(self) -> None:
         assert HookEvent.PreToolUse == 'PreToolUse'
         assert HookEvent.PostToolUse == 'PostToolUse'
+        assert HookEvent.PostToolUseFailure == 'PostToolUseFailure'
         assert HookEvent.PreModelCall == 'PreModelCall'
         assert HookEvent.PostModelCall == 'PostModelCall'
         assert HookEvent.PreHandoff == 'PreHandoff'
         assert HookEvent.PostHandoff == 'PostHandoff'
+        assert HookEvent.SubagentStart == 'SubagentStart'
+        assert HookEvent.SubagentStop == 'SubagentStop'
         assert HookEvent.OnError == 'OnError'
         assert HookEvent.OnStart == 'OnStart'
         assert HookEvent.OnStop == 'OnStop'
         assert HookEvent.PreCompact == 'PreCompact'
         assert HookEvent.Notification == 'Notification'
+        assert HookEvent.UserPromptSubmit == 'UserPromptSubmit'
+        assert HookEvent.PermissionRequest == 'PermissionRequest'
 
     def test_event_is_str_enum(self) -> None:
         assert isinstance(HookEvent.PreToolUse, str)

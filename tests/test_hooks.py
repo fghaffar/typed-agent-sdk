@@ -8,7 +8,19 @@ from typing import Any
 import pytest
 
 from typed_agent_sdk.errors import HookExecutionError
-from typed_agent_sdk.hooks import Hook, HookMatcher, HookResult, _fire_hooks
+from typed_agent_sdk.hooks import (
+    Hook,
+    HookMatcher,
+    HookResult,
+    _fire_hooks,
+    fire_permission_request,
+    fire_user_prompt_submit,
+    on_permission_request,
+    on_post_tool_use_failure,
+    on_subagent_start,
+    on_subagent_stop,
+    on_user_prompt_submit,
+)
 from typed_agent_sdk.types import (
     HookEvent,
     OnStartData,
@@ -258,3 +270,160 @@ class TestFireHooks:
         # Give background task time to complete
         await asyncio.sleep(0.2)
         assert executed.is_set()
+
+
+class TestAnthropicSDKParityHooks:
+    """Hooks added for Claude Agent SDK feature parity."""
+
+    @pytest.mark.asyncio
+    async def test_user_prompt_submit_fires(self) -> None:
+        seen: list[str] = []
+
+        @on_user_prompt_submit()
+        async def cb(data: Any, ctx: Any) -> HookResult:
+            seen.append(data.prompt)
+            return HookResult()
+
+        result = await fire_user_prompt_submit([cb], 'hello world', agent_name='a')
+        assert seen == ['hello world']
+        assert result is not None
+        assert result.block is False
+
+    @pytest.mark.asyncio
+    async def test_user_prompt_submit_can_inject_context(self) -> None:
+        @on_user_prompt_submit()
+        async def cb(data: Any, ctx: Any) -> HookResult:
+            return HookResult(additional_context='extra info')
+
+        result = await fire_user_prompt_submit([cb], 'q')
+        assert result is not None
+        assert result.additional_context == 'extra info'
+
+    @pytest.mark.asyncio
+    async def test_user_prompt_submit_can_block(self) -> None:
+        @on_user_prompt_submit()
+        async def cb(data: Any, ctx: Any) -> HookResult:
+            return HookResult(block=True, stop_reason='disallowed')
+
+        result = await fire_user_prompt_submit([cb], 'q')
+        assert result is not None
+        assert result.block is True
+        assert result.stop_reason == 'disallowed'
+
+    @pytest.mark.asyncio
+    async def test_permission_request_fires_with_tool_target(self) -> None:
+        seen: list[str] = []
+
+        @on_permission_request(matcher=r'^Bash$')
+        async def cb(data: Any, ctx: Any) -> HookResult:
+            seen.append(data.tool_name)
+            return HookResult()
+
+        # Matches Bash
+        await fire_permission_request([cb], 'Bash', {'command': 'ls'})
+        # Does not match Read
+        await fire_permission_request([cb], 'Read', {'path': '/'})
+        assert seen == ['Bash']
+
+    @pytest.mark.asyncio
+    async def test_permission_request_can_deny(self) -> None:
+        @on_permission_request()
+        async def cb(data: Any, ctx: Any) -> HookResult:
+            return HookResult(block=True, stop_reason='denied')
+
+        result = await fire_permission_request([cb], 'Bash', {'command': 'rm -rf /'})
+        assert result is not None
+        assert result.block is True
+
+    @pytest.mark.asyncio
+    async def test_post_tool_use_failure_decorator_creates_correct_hook(self) -> None:
+        @on_post_tool_use_failure(matcher=r'.*')
+        async def cb(data: Any, ctx: Any) -> HookResult:
+            return HookResult()
+
+        assert cb.event == HookEvent.PostToolUseFailure
+
+    @pytest.mark.asyncio
+    async def test_subagent_alias_decorators(self) -> None:
+        @on_subagent_start()
+        async def start_cb(data: Any, ctx: Any) -> HookResult:
+            return HookResult()
+
+        @on_subagent_stop()
+        async def stop_cb(data: Any, ctx: Any) -> HookResult:
+            return HookResult()
+
+        assert start_cb.event == HookEvent.SubagentStart
+        assert stop_cb.event == HookEvent.SubagentStop
+
+
+class TestHookToolsetPermissionGate:
+    """HookToolset.call_tool should consult an attached PermissionPolicy."""
+
+    @pytest.mark.asyncio
+    async def test_blocked_tool_returns_denial_string_without_invoking_wrapped(self) -> None:
+        from typed_agent_sdk.hooks import HookToolset
+        from typed_agent_sdk.permissions import PermissionPolicy
+
+        invoked = False
+
+        class FakeWrapped:
+            async def call_tool(
+                self, name: str, args: dict, ctx: Any, tool: Any
+            ) -> Any:  # type: ignore[type-arg]
+                nonlocal invoked
+                invoked = True
+                return 'should not run'
+
+        ts: HookToolset[Any] = HookToolset(
+            wrapped=FakeWrapped(),  # type: ignore[arg-type]
+            hooks=[],
+            policy=PermissionPolicy(blocked_tools=['Bash']),
+        )
+        result = await ts.call_tool('Bash', {'cmd': 'ls'}, ctx=object(), tool=object())
+        assert isinstance(result, str)
+        assert 'denied by permission policy' in result
+        assert invoked is False
+
+    @pytest.mark.asyncio
+    async def test_allowed_tool_passes_through(self) -> None:
+        from typed_agent_sdk.hooks import HookToolset
+        from typed_agent_sdk.permissions import PermissionPolicy
+
+        class FakeWrapped:
+            async def call_tool(
+                self, name: str, args: dict, ctx: Any, tool: Any
+            ) -> Any:  # type: ignore[type-arg]
+                return f'ran {name}'
+
+        ts: HookToolset[Any] = HookToolset(
+            wrapped=FakeWrapped(),  # type: ignore[arg-type]
+            hooks=[],
+            policy=PermissionPolicy(allowed_tools=['Read']),
+        )
+        result = await ts.call_tool('Read', {'path': '/'}, ctx=object(), tool=object())
+        assert result == 'ran Read'
+
+    @pytest.mark.asyncio
+    async def test_permission_request_hook_can_deny_at_dispatch(self) -> None:
+        from typed_agent_sdk.hooks import HookToolset, on_permission_request
+        from typed_agent_sdk.permissions import PermissionPolicy
+
+        class FakeWrapped:
+            async def call_tool(
+                self, name: str, args: dict, ctx: Any, tool: Any
+            ) -> Any:  # type: ignore[type-arg]
+                return 'ran'
+
+        @on_permission_request()
+        async def deny(data: Any, ctx: Any) -> HookResult:
+            return HookResult(block=True, stop_reason='compliance')
+
+        ts: HookToolset[Any] = HookToolset(
+            wrapped=FakeWrapped(),  # type: ignore[arg-type]
+            hooks=[deny],
+            policy=PermissionPolicy(require_approval=['risky_*']),
+        )
+        result = await ts.call_tool('risky_op', {}, ctx=object(), tool=object())
+        assert isinstance(result, str)
+        assert 'compliance' in result
