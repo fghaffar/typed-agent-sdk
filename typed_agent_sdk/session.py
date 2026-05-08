@@ -119,7 +119,7 @@ class JSONSessionBackend:
 
     async def list_sessions(self, limit: int = 100) -> list[SessionInfo]:
         """List all sessions, most recently updated first."""
-        sessions = []
+        sessions: list[SessionInfo] = []
         for path in sorted(self._dir.glob('*.json'), key=lambda p: p.stat().st_mtime, reverse=True):
             if len(sessions) >= limit:
                 break

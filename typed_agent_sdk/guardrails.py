@@ -177,7 +177,7 @@ async def run_guardrails(
 
     checked_results: list[GuardrailResult] = []
     for guardrail, result in zip(matching, results, strict=False):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             raise result
 
         checked_results.append(result)

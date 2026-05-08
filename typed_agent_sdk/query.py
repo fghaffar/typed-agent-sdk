@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import Agent
+from pydantic_ai.messages import TextPart, ToolCallPart, ToolReturnPart
 
 from typed_agent_sdk.errors import AgentSDKError
 from typed_agent_sdk.permissions import PermissionPolicy
@@ -164,7 +165,7 @@ async def query(
         agent.tool_plain(tool_func)
 
     # Create runner
-    runner = Runner(
+    runner: Runner[Any, Any] = Runner(
         agent,
         hooks=effective_hooks,
         guardrails=effective_guardrails,
@@ -187,16 +188,15 @@ async def query(
             # Extract text and tool call parts from Pydantic AI messages
             if hasattr(msg, 'parts'):
                 for part in msg.parts:
-                    part_type = type(part).__name__
-                    if part_type == 'TextPart':
+                    if isinstance(part, TextPart):
                         yield TextMessage(text=part.content)
-                    elif part_type == 'ToolCallPart':
+                    elif isinstance(part, ToolCallPart):
                         yield ToolCallMessage(
                             tool_name=part.tool_name,
                             tool_args=part.args if isinstance(part.args, dict) else {},
                             tool_call_id=getattr(part, 'tool_call_id', None),
                         )
-                    elif part_type == 'ToolReturnPart':
+                    elif isinstance(part, ToolReturnPart):
                         yield ToolResultMessage(
                             tool_name=part.tool_name,
                             result=part.content,
@@ -246,7 +246,7 @@ def query_sync(
     for tool_func in effective_tools:
         agent.tool_plain(tool_func)
 
-    runner = Runner(
+    runner: Runner[Any, Any] = Runner(
         agent,
         hooks=effective_hooks,
         guardrails=effective_guardrails,
@@ -342,16 +342,15 @@ class AgentSDKClient:
         for msg in self._last_result.messages:
             if hasattr(msg, 'parts'):
                 for part in msg.parts:
-                    part_type = type(part).__name__
-                    if part_type == 'TextPart':
+                    if isinstance(part, TextPart):
                         yield TextMessage(text=part.content)
-                    elif part_type == 'ToolCallPart':
+                    elif isinstance(part, ToolCallPart):
                         yield ToolCallMessage(
                             tool_name=part.tool_name,
                             tool_args=part.args if isinstance(part.args, dict) else {},
                             tool_call_id=getattr(part, 'tool_call_id', None),
                         )
-                    elif part_type == 'ToolReturnPart':
+                    elif isinstance(part, ToolReturnPart):
                         yield ToolResultMessage(
                             tool_name=part.tool_name,
                             result=part.content,

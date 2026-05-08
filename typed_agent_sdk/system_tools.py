@@ -2,13 +2,15 @@
 
 Provides bash, file_read, file_write, file_edit, glob, and grep
 as a selectively-enabled Skill.
+
+``bash`` routes through a pluggable :class:`ExecutionBackend`, so the same
+tool schema works against a local subprocess, a Modal sandbox, an E2B
+sandbox, or any other backend a user plugs in.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -19,6 +21,7 @@ from typed_agent_sdk.errors import (
     EditAmbiguousError,
     EditNotFoundError,
 )
+from typed_agent_sdk.execution import ExecutionBackend, LocalBackend
 from typed_agent_sdk.skills import Skill
 
 logger = logging.getLogger('typed_agent_sdk.system_tools')
@@ -29,16 +32,18 @@ ALL_SYSTEM_TOOLS = ['bash', 'file_read', 'file_write', 'file_edit', 'glob', 'gre
 async def bash(
     command: str,
     *,
+    backend: ExecutionBackend | None = None,
     cwd: str | Path | None = None,
     timeout: float = 120.0,
     env: dict[str, str] | None = None,
     max_output_bytes: int = 5_242_880,
 ) -> str:
-    """Execute a shell command and return stdout + stderr.
+    """Run a shell command via an ExecutionBackend and return stdout + stderr.
 
     Args:
-        command: Shell command to execute.
-        cwd: Working directory. Defaults to current directory.
+        command: Shell command to run.
+        backend: Execution backend to run the command on. Defaults to LocalBackend.
+        cwd: Working directory. Defaults to the backend's default.
         timeout: Maximum execution time in seconds.
         env: Additional environment variables.
         max_output_bytes: Maximum output size in bytes (default 5MB).
@@ -49,38 +54,36 @@ async def bash(
     if not command.strip():
         raise ValueError('Command cannot be empty')
 
-    full_env = {**os.environ, **(env or {})}
-    effective_cwd = str(cwd) if cwd else None
-
+    active_backend = backend if backend is not None else LocalBackend()
     try:
-        proc = await asyncio.create_subprocess_shell(
+        result = await active_backend.exec(
             command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=effective_cwd,
-            env=full_env,
+            timeout=timeout,
+            cwd=str(cwd) if cwd else None,
+            env=env,
         )
-
-        try:
-            stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        except (TimeoutError, asyncio.TimeoutError):
-            proc.kill()
-            await proc.wait()
-            return f'[Command timed out after {timeout}s]'
-
-        stdout = stdout_bytes.decode('utf-8', errors='replace')
-        stderr = stderr_bytes.decode('utf-8', errors='replace')
-
-        output = stdout
-        if stderr:
-            output += f'\n[STDERR]\n{stderr}'
-
-        return truncate_output(output, max_bytes=max_output_bytes)
-
-    except FileNotFoundError:
-        return f'[Command not found: {command.split()[0]}]'
     except Exception as e:
-        return f'[Error executing command: {e}]'
+        # Log the full exception (with traceback and any backend-internal
+        # detail) for the developer, but only surface a short, type-prefixed
+        # message to the model — avoids leaking auth tokens or internal URLs
+        # that some backends embed in exception messages.
+        logger.exception(
+            'ExecutionBackend %s raised on command %r',
+            type(active_backend).__name__,
+            command,
+        )
+        msg = str(e)
+        if len(msg) > 200:
+            msg = msg[:200] + '...[truncated]'
+        return f'[Error running command: {type(e).__name__}: {msg}]'
+
+    output = result['stdout']
+    if result['stderr']:
+        output += f'\n[STDERR]\n{result["stderr"]}'
+    if result['exit_code'] not in (0, None):
+        output += f'\n[exit code: {result["exit_code"]}]'
+
+    return truncate_output(output, max_bytes=max_output_bytes)
 
 
 async def file_read(
@@ -300,6 +303,7 @@ class SystemTools(Skill[Any]):
         self,
         *,
         allowed: list[str] | None = None,
+        backend: ExecutionBackend | None = None,
         cwd: str | Path | None = None,
         bash_timeout: float = 120.0,
         env: dict[str, str] | None = None,
@@ -307,6 +311,7 @@ class SystemTools(Skill[Any]):
         max_output_bytes: int = 5_242_880,
     ) -> None:
         self._allowed = allowed or ALL_SYSTEM_TOOLS
+        self._backend = backend
         self._cwd = Path(cwd) if cwd else Path.cwd()
         self._bash_timeout = bash_timeout
         self._env = env
@@ -333,11 +338,13 @@ class SystemTools(Skill[Any]):
         bash_timeout = self._bash_timeout
         env = self._env
         max_output = self._max_output_bytes
+        backend = self._backend
 
         async def _bash(command: str) -> str:
-            """Execute a shell command."""
+            """Run a shell command on the configured backend."""
             return await bash(
                 command,
+                backend=backend,
                 cwd=cwd,
                 timeout=bash_timeout,
                 env=env,
@@ -364,7 +371,7 @@ class SystemTools(Skill[Any]):
             """Search file contents using regex."""
             return await grep_content(pattern, cwd=cwd, include=include)
 
-        return {
+        tool_map: dict[str, Any] = {
             'bash': _bash,
             'file_read': _file_read,
             'file_write': _file_write,
@@ -372,3 +379,9 @@ class SystemTools(Skill[Any]):
             'glob': _glob,
             'grep': _grep,
         }
+        # Pydantic AI registers a tool under its function's __name__. Without
+        # this, tools would appear to the model as "_bash", "_file_read", etc.
+        for tool_name, func in tool_map.items():
+            func.__name__ = tool_name
+            func.__qualname__ = f'SystemTools.{tool_name}'
+        return tool_map

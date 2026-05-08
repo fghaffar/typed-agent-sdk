@@ -19,6 +19,7 @@ A lightweight, model-agnostic, type-safe agent SDK built on [Pydantic AI](https:
 - **Handoffs** -- multi-agent delegation with depth limiting
 - **Permissions** -- glob-pattern access control with allow/block lists
 - **Sessions** -- persistent conversation state with pluggable backends
+- **Pluggable execution** -- run shell tools locally or in a remote sandbox (Modal, E2B, ...) via a 2-method `ExecutionBackend` protocol
 - **Async-first** -- native async design with sync wrappers
 
 ## Installation
@@ -100,6 +101,33 @@ async with AgentSDKClient(model="openai:gpt-4o") as client:
         print(msg)
 ```
 
+## Pluggable Execution Backends
+
+`SystemTools` runs shell commands through an `ExecutionBackend`. Out of the box, `LocalBackend` runs them as a local subprocess. You can swap in any object that implements two methods (`exec`, `aclose`) — Modal, E2B, Daytona, an SSH session, or a test double — without changing prompts or tool schemas.
+
+```python
+from typed_agent_sdk import LocalBackend, Runner, SystemTools
+
+# Default — local subprocess
+runner = Runner(agent, skills=[SystemTools(allowed=['bash'])])
+
+# Or a remote sandbox (any object satisfying the ExecutionBackend protocol)
+class MyBackend:
+    async def exec(self, command, *, timeout=120, cwd=None, env=None):
+        ...  # delegate to Modal / E2B / SSH / etc.
+        return {'stdout': '...', 'stderr': '', 'exit_code': 0}
+    async def aclose(self):
+        ...
+
+runner = Runner(agent, skills=[SystemTools(allowed=['bash'], backend=MyBackend())])
+```
+
+See [`examples/sandbox_backend.py`](examples/sandbox_backend.py) for a runnable demo with three backend variants (local, scripted, read-only policy wrapper).
+
+Optional first-party adapters are planned as separate extras: `pip install typed-agent-sdk[modal]` and `pip install typed-agent-sdk[e2b]`.
+
+> **Lifecycle:** Phase 1 leaves backend teardown to the caller. The `ExecutionBackend` protocol defines `aclose()`, but `Runner` does not invoke it automatically yet. If your backend holds remote resources (sandboxes, sockets), call `await backend.aclose()` in a `finally` block. Automatic lifecycle wiring is planned for Phase 2.
+
 ## Architecture
 
 typed-agent-sdk is a thin orchestration layer on top of Pydantic AI:
@@ -127,6 +155,7 @@ Any LLM Provider (OpenAI, Anthropic, Google, Groq, Ollama, ...)
 | | `PermissionPolicy`, `PermissionMode` | Access control |
 | | `Session`, `JSONSessionBackend` | Conversation persistence |
 | | `SystemTools` | Built-in tools (bash, file ops, glob, grep) |
+| | `ExecutionBackend`, `LocalBackend`, `ExecResult` | Pluggable execution layer for shell tools |
 | | `HookRecorder`, `GuardrailRecorder` | Test utilities |
 
 ## Development

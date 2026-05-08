@@ -7,7 +7,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 
 def glob_match(pattern: str, name: str) -> bool:
