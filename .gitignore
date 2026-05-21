@@ -5,6 +5,8 @@ claude-agent-sdk-demos/
 pydantic-ai/
 CLAUDE.md
 specs/
+.omx/
+reviews/
 
 # Python
 __pycache__/

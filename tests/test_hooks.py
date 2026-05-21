@@ -368,9 +368,7 @@ class TestHookToolsetPermissionGate:
         invoked = False
 
         class FakeWrapped:
-            async def call_tool(
-                self, name: str, args: dict, ctx: Any, tool: Any
-            ) -> Any:  # type: ignore[type-arg]
+            async def call_tool(self, name: str, args: dict, ctx: Any, tool: Any) -> Any:  # type: ignore[type-arg]
                 nonlocal invoked
                 invoked = True
                 return 'should not run'
@@ -391,9 +389,7 @@ class TestHookToolsetPermissionGate:
         from typed_agent_sdk.permissions import PermissionPolicy
 
         class FakeWrapped:
-            async def call_tool(
-                self, name: str, args: dict, ctx: Any, tool: Any
-            ) -> Any:  # type: ignore[type-arg]
+            async def call_tool(self, name: str, args: dict, ctx: Any, tool: Any) -> Any:  # type: ignore[type-arg]
                 return f'ran {name}'
 
         ts: HookToolset[Any] = HookToolset(
@@ -410,9 +406,7 @@ class TestHookToolsetPermissionGate:
         from typed_agent_sdk.permissions import PermissionPolicy
 
         class FakeWrapped:
-            async def call_tool(
-                self, name: str, args: dict, ctx: Any, tool: Any
-            ) -> Any:  # type: ignore[type-arg]
+            async def call_tool(self, name: str, args: dict, ctx: Any, tool: Any) -> Any:  # type: ignore[type-arg]
                 return 'ran'
 
         @on_permission_request()

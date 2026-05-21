@@ -11,10 +11,13 @@ agent = Agent('test', system_prompt='You are a helpful assistant.')
 
 @agent.tool_plain
 def calculate(expression: str) -> str:
-    """Evaluate a math expression safely using ast.literal_eval."""
+    """Parse a Python literal expression with ast.literal_eval (safe)."""
     import ast
 
-    return str(ast.literal_eval(expression))
+    try:
+        return str(ast.literal_eval(expression))
+    except (ValueError, SyntaxError) as exc:
+        return f'Cannot parse {expression!r}: {exc}'
 
 
 # Hook to log all tool calls

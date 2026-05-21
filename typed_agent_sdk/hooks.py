@@ -329,9 +329,7 @@ async def fire_user_prompt_submit(
     from typed_agent_sdk.types import UserPromptSubmitData
 
     data = UserPromptSubmitData(prompt=prompt, agent_name=agent_name)
-    return await _fire_hooks(
-        hooks, HookEvent.UserPromptSubmit, data, None, metrics=metrics
-    )
+    return await _fire_hooks(hooks, HookEvent.UserPromptSubmit, data, None, metrics=metrics)
 
 
 async def fire_permission_request(
